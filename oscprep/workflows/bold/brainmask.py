@@ -76,6 +76,7 @@ def init_brainmask_wholebrain_bold_wf(
         name='apply_mask',
     )
 
+    # Connect
     workflow.connect([
         (inputnode, bbr_wf, [
             ('wholebrain_bold','inputnode.in_file'),
@@ -124,11 +125,20 @@ def init_brainmask_slab_bold_wf(
     """
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
     
+    from fmriprep.workflows.bold.registration import init_fsl_bbr_wf
+    from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
+    from nipype.interfaces.fsl import ApplyMask
+    
     workflow = Workflow(name=name)
     
     inputnode = pe.Node(
         niu.IdentityInterface(
-            []
+            [
+                'slab_bold',
+                'wholebrain_bold_dseg',
+                'wholebrain_bold',
+                'wholebrain_bold_brainmask' # Generated from ``init_brainmask_wholebrain_bold_wf``
+            ]
         ),
         name='inputnode',
     )
@@ -137,5 +147,43 @@ def init_brainmask_slab_bold_wf(
         niu.IdentityInterface(['brain','brainmask']),
         name='outputnode',
     )
+
+    # fsl_bbr slab-bold-to-wholebrain-bold
+    fsl_bbr_wf = init_fsl_bbr_wf(use_bbr=True,bold2t1w_dof=6,bold2t1w_init='register',omp_nthreads=4)
+
+    # transform t1w_brainmask to wholebrain-bold space
+    boldbrainmask_to_slab = pe.Node(
+        ApplyTransforms(
+            interpolation="MultiLabel",
+            float=True
+        ),
+        name='slab_bold_brainmask'
+    )
+
+    # Return skullstripped slab-bold
+    apply_mask = pe.Node(
+        ApplyMask(
+            out_file='brain.nii.gz'
+        ),
+        name='apply_mask',
+    )
+    
+    # Connect
+    workflow.connect([
+        (inputnode, fsl_bbr_wf, [
+            ('slab_bold','inputnode.in_file'),
+            ('wholebrain_bold_dseg','inputnode.t1w_dseg'),
+            ('wholebrain_bold','inputnode.t1w_brain')
+        ]),
+        (fsl_bbr_wf, boldbrainmask_to_slab, [('itk_t1_to_bold','transforms')]),
+        (inputnode, boldbrainmask_to_slab, [
+            ('wholebrain_bold_brainmask','input_image'),
+            ('slab_bold','reference_image')
+        ]),
+        (boldbrainmask_to_slab, apply_mask, [('output_image','mask_file')]),
+        (inputnode, apply_mask, [('slab_bold','in_file')]),
+        (apply_mask,outputnode,[('out_file','brain')]),
+        (boldbrainmask_to_slab,outputnode,[('output_image','brainmask')])
+    ])
 
     return workflow
