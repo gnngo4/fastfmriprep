@@ -86,12 +86,12 @@ def init_brainmask_wholebrain_bold_wf(
             ('t1w_dseg','inputnode.t1w_dseg'),
             ('t1w_brain','inputnode.t1w_brain')
         ]),
-        (bbr_wf, t1brainmask_to_bold, [('itk_t1_to_bold','transforms')]),
+        (bbr_wf, t1brainmask_to_bold, [('outputnode.itk_t1_to_bold','transforms')]),
         (inputnode, t1brainmask_to_bold, [
             ('t1w_brainmask','input_image'),
             ('wholebrain_bold','reference_image')
         ]),
-        (bbr_wf, t1dseg_to_bold, [('itk_t1_to_bold','transforms')]),
+        (bbr_wf, t1dseg_to_bold, [('outputnode.itk_t1_to_bold','transforms')]),
         (inputnode, t1dseg_to_bold, [
             ('t1w_dseg','input_image'),
             ('wholebrain_bold','reference_image')
@@ -175,7 +175,7 @@ def init_brainmask_slab_bold_wf(
             ('wholebrain_bold_dseg','inputnode.t1w_dseg'),
             ('wholebrain_bold','inputnode.t1w_brain')
         ]),
-        (fsl_bbr_wf, boldbrainmask_to_slab, [('itk_t1_to_bold','transforms')]),
+        (fsl_bbr_wf, boldbrainmask_to_slab, [('outputnode.itk_t1_to_bold','transforms')]),
         (inputnode, boldbrainmask_to_slab, [
             ('wholebrain_bold_brainmask','input_image'),
             ('slab_bold','reference_image')
