@@ -44,7 +44,7 @@ def init_brainmask_wholebrain_bold_wf(
     )
 
     outputnode = pe.Node(
-        niu.IdentityInterface(['brain','brainmask','dseg']),
+        niu.IdentityInterface(['brain','brainmask','dseg','itk_bold_to_t1','itk_t1_to_bold']),
         name='outputnode',
     )
 
@@ -98,6 +98,10 @@ def init_brainmask_wholebrain_bold_wf(
         ]),
         (t1brainmask_to_bold, apply_mask, [('output_image','mask_file')]),
         (inputnode, apply_mask, [('wholebrain_bold','in_file')]),
+        (bbr_wf, outputnode, [
+            ('outputnode.itk_bold_to_t1','itk_bold_to_t1'),
+            ('outputnode.itk_t1_to_bold','itk_t1_to_bold')
+        ]),
         (apply_mask,outputnode,[('out_file','brain')]),
         (t1brainmask_to_bold,outputnode,[('output_image','brainmask')]),
         (t1dseg_to_bold,outputnode,[('output_image','dseg')])
@@ -144,7 +148,7 @@ def init_brainmask_slab_bold_wf(
     )
 
     outputnode = pe.Node(
-        niu.IdentityInterface(['brain','brainmask']),
+        niu.IdentityInterface(['brain','brainmask','itk_bold_to_t1','itk_t1_to_bold']), # bold == slab & t1 == wholebrain
         name='outputnode',
     )
 
@@ -182,6 +186,10 @@ def init_brainmask_slab_bold_wf(
         ]),
         (boldbrainmask_to_slab, apply_mask, [('output_image','mask_file')]),
         (inputnode, apply_mask, [('slab_bold','in_file')]),
+        (fsl_bbr_wf, outputnode, [
+            ('outputnode.itk_bold_to_t1','itk_bold_to_t1'),
+            ('outputnode.itk_t1_to_bold','itk_t1_to_bold')
+        ]),
         (apply_mask,outputnode,[('out_file','brain')]),
         (boldbrainmask_to_slab,outputnode,[('output_image','brainmask')])
     ])
