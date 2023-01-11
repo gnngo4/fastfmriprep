@@ -105,7 +105,7 @@ def init_fmap2epi_wholebrain_bold_wf(name="fmap2epi_wholebrain_bold_wf"):
     )
 
     concat_transforms = pe.Node(
-        niu.Function(function=_concat_transforms, input_names=["xfm_1","xfm_2"]),
+        niu.Function(function=_concat_transforms_2, input_names=["xfm_1","xfm_2"]),
         name="concat_transforms"
     )
 
@@ -125,6 +125,66 @@ def init_fmap2epi_wholebrain_bold_wf(name="fmap2epi_wholebrain_bold_wf"):
 
     return workflow
 
+def init_fmap2epi_slab_bold_wf(name="fmap2epi_slab_bold_wf"):
+
+    from niworkflows.engine.workflows import LiterateWorkflow as Workflow
+
+    from nipype.interfaces import ants
+
+    workflow = Workflow(name=name)
+
+    inputnode = pe.Node(
+        niu.IdentityInterface(
+            fields=[
+                "itk_wholebrainbold2slabbold",
+                "itk_anat2wholebrainbold",
+                "itk_fmap2anat"
+            ]
+        ),
+        name="inputnode"
+    )
+
+    outputnode = pe.Node(
+        niu.IdentityInterface(
+            fields=["itk_fmap2epi"]
+        ),
+        name="outputnode"
+    )
+
+    wholebrainbold_tfm_to_txt = pe.Node(
+        niu.Function(function=_tfm_to_txt, input_names=["source"]),
+        name="wholebrainbold_tfm_to_txt"
+    )
+    
+    slabbold_tfm_to_txt = pe.Node(
+        niu.Function(function=_tfm_to_txt, input_names=["source"]),
+        name="slabbold_tfm_to_txt"
+    )
+
+    concat_transforms = pe.Node(
+        niu.Function(function=_concat_transforms_3, input_names=["xfm_1","xfm_2","xfm_3"]),
+        name="concat_transforms"
+    )
+
+    compose_transform = pe.Node(
+        ants.ComposeMultiTransform(dimension=3),
+        name='compose_transform'
+    )
+
+    workflow.connect([
+        (inputnode,concat_transforms,[('itk_fmap2anat','xfm_1')]),
+        (inputnode,wholebrainbold_tfm_to_txt,[('itk_anat2wholebrainbold','source')]),
+        (wholebrainbold_tfm_to_txt,concat_transforms,[('out','xfm_2')]),
+        (inputnode,slabbold_tfm_to_txt,[('itk_wholebrainbold2slabbold','source')]),
+        (slabbold_tfm_to_txt,concat_transforms,[('out','xfm_3')]),
+        (slabbold_tfm_to_txt,compose_transform,[(('out',_add_reference_flag),'reference_image')]),
+        (concat_transforms,compose_transform,[('out','transforms')]),
+        (compose_transform,outputnode,[('output_transform','itk_fmap2epi')]),
+    ])
+
+    return workflow
+
+
 def _tfm_to_txt(source):
 
     import shutil, os
@@ -138,5 +198,8 @@ def _add_reference_flag(_path):
 
     return f"-R {_path}"
 
-def _concat_transforms(xfm_1,xfm_2):
+def _concat_transforms_2(xfm_1,xfm_2):
     return [xfm_2,xfm_1]
+
+def _concat_transforms_3(xfm_1,xfm_2,xfm_3):
+    return [xfm_3,xfm_2,xfm_1]

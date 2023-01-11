@@ -5,33 +5,53 @@ from pkg_resources import resource_filename as pkgrf
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
-def init_coeff2epi_wf(
-    omp_nthreads,
-    debug=True,
-    write_coeff=False,
-    name="coeff2epi_wf"
+def init_sdc_unwarp_wf(
+    name="sdc_unwarp_wf"
 ):
     
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
 
     from niworkflows.interfaces.fixes import ApplyTransforms
+    from nipype.interfaces import fsl
+    
+    workflow = Workflow(name=name)
+
+    return workflow
+
+def init_apply_fmap2epi_wf(
+    omp_nthreads,
+    name="fmap2epi_wf"
+):
+    
+    from niworkflows.engine.workflows import LiterateWorkflow as Workflow
+
+    from niworkflows.interfaces.fixes import ApplyTransforms
+    from nipype.interfaces import fsl
     
     workflow = Workflow(name=name)
 
     inputnode = pe.Node(
         niu.IdentityInterface(
-            fields=["fmap_coeff","fmap_ref","target_ref","fmap2epi_xfm"]
+            fields=["fmap","fmap_ref","target_ref","target_mask","fmap2epi_xfm"]
         ),
         name="inputnode"
     )
 
     outputnode = pe.Node(
         niu.IdentityInterface(
-            fields=["target_ref","fmap_coeff"]
+            fields=["target_ref","fmap_bold"]
         ),
         name="outputnode"
     )
 
+    # QA for fieldmap-magnitude to epi-space
+    fmapmag2epi = pe.Node(
+        ApplyTransforms(invert_transform_flags=[False]),
+        name='fmapmag2epi',
+        n_procs=4,
+        mem_gb=0.3
+    )
+    
     fmap2epi = pe.Node(
         ApplyTransforms(invert_transform_flags=[False]),
         name='fmap2epi',
@@ -39,30 +59,36 @@ def init_coeff2epi_wf(
         mem_gb=0.3
     )
 
-    from sdcflows.interfaces.bspline import TransformCoefficients
-    # Map the coefficients into the EPI space
-    map_coeff = pe.Node(TransformCoefficients(),name="map_coeff")
-    map_coeff.interface._always_run=debug
+    mask_fmap = pe.Node(
+        fsl.ApplyMask(),
+        name='mask_fmap'
+    )
+
+    convert_to_rad = pe.Node(
+        fsl.BinaryMaths(
+            operation='mul',
+            operand_value=6.28
+        ),
+        name='convert_to_rad'
+    )
 
     workflow.connect([
-        (inputnode,fmap2epi,[
+        (inputnode,fmapmag2epi,[
             ('fmap_ref','input_image'),
             ('target_ref','reference_image'),
-            ('fmap2epi_xfm','transforms'),
+            ('fmap2epi_xfm','transforms')
         ]),
-        (fmap2epi,outputnode,[('output_image','target_ref')]),
-        (inputnode,map_coeff,[
-            ("fmap_coeff","in_coeff"),
-            ("fmap_ref","fmap_ref"),
-            ("fmap2epi_xfm","transform"),
+        (fmapmag2epi,outputnode,[('output_image','target_ref')]),
+        (inputnode,fmap2epi,[
+            ('fmap','input_image'),
+            ('target_ref','reference_image'),
+            ('fmap2epi_xfm','transforms')
         ]),
-        (map_coeff,outputnode,[("out_coeff","fmap_coeff")])
+        (fmap2epi,mask_fmap,[('output_image','in_file')]),
+        (inputnode,mask_fmap,[('target_mask','mask_file')]),
+        (mask_fmap,convert_to_rad,[('out_file','in_file')]),
+        (convert_to_rad,outputnode,[('out_file','fmap_bold')])
     ])
-
-    if debug:
-        workflow.connect([
-            (inputnode, map_coeff,[("target_ref","fmap_target")])
-        ])
 
     return workflow
 
