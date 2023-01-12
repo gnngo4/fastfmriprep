@@ -6,17 +6,94 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
 def init_sdc_unwarp_wf(
-    name="sdc_unwarp_wf"
+    name="sdc_unwarp_wf",
 ):
     
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
 
-    from niworkflows.interfaces.fixes import ApplyTransforms
     from nipype.interfaces import fsl
     
     workflow = Workflow(name=name)
+    
+    inputnode = pe.Node(
+        niu.IdentityInterface(
+            fields=["bold_metadata","distorted_bold","fmap"]
+        ),
+        name="inputnode"
+    )
+
+    outputnode = pe.Node(
+        niu.IdentityInterface(
+            fields=["sdc_warp","undistorted_bold"]
+        ),
+        name="outputnode"
+    )
+
+    get_vsm = pe.Node(
+        fsl.FUGUE(
+            save_shift=True,
+        ),
+        name="get_vsm"
+    )
+
+    vsm_to_warp = pe.Node(
+        fsl.ConvertWarp(
+            abswarp=True,
+            output_type = "NIFTI_GZ"
+        ),
+        name='vsm_to_warp'
+    )
+
+    unwarp_bold = pe.Node(
+        fsl.ApplyWarp(),
+        name='unwarp_bold'
+    )
+
+    # Connect
+    workflow.connect([
+        (inputnode,get_vsm,[
+            ('distorted_bold','in_file'),
+            ('fmap','fmap_in_file'),
+            (('bold_metadata',_get_metadata,"EffectiveEchoSpacing"),'dwell_time'),
+        ]),
+        (inputnode,vsm_to_warp,[
+            ('distorted_bold','reference'),
+            (('bold_metadata',_get_fsl_shift_direction),'shift_direction')
+        ]),
+        (get_vsm,vsm_to_warp,[('shift_out_file','shift_in_file')]),
+        (vsm_to_warp,outputnode,[('out_file','sdc_warp')]),
+        (inputnode,unwarp_bold,[
+            ('distorted_bold','in_file'),
+            ('distorted_bold','ref_file')
+        ]),
+        (vsm_to_warp,unwarp_bold,[('out_file','field_file')]),
+        (unwarp_bold,outputnode,[('out_file','undistorted_bold')])
+    ])
 
     return workflow
+
+def _get_metadata(metadata_dict,_key):
+
+    assert _key in metadata_dict, f"{_key} not found in metadata."
+
+    return metadata_dict[_key]
+
+def _get_fsl_shift_direction(metadata_dict):
+    
+    assert 'PhaseEncodingDirection' in metadata_dict, f"PhaseEncodingDirection not found in metadata."
+
+    pe_dir = metadata_dict['PhaseEncodingDirection']
+    fsl_pe_mappings = {
+        'i': 'x',
+        'i-': 'x-',
+        'j': 'y',
+        'j-': 'y-',
+        'k': 'z',
+        'k-': 'z-',
+    }
+
+    return fsl_pe_mappings[pe_dir]
+
 
 def init_apply_fmap2epi_wf(
     omp_nthreads,
