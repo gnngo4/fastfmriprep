@@ -17,14 +17,14 @@ def init_sdc_unwarp_wf(
     
     inputnode = pe.Node(
         niu.IdentityInterface(
-            fields=["bold_metadata","distorted_bold","fmap"]
+            fields=["bold_metadata","distorted_bold","fmap","dseg"]
         ),
         name="inputnode"
     )
 
     outputnode = pe.Node(
         niu.IdentityInterface(
-            fields=["sdc_warp","undistorted_bold"]
+            fields=["sdc_warp","undistorted_bold","undistorted_dseg"]
         ),
         name="outputnode"
     )
@@ -48,6 +48,11 @@ def init_sdc_unwarp_wf(
         fsl.ApplyWarp(),
         name='unwarp_bold'
     )
+    
+    unwarp_dseg = pe.Node(
+        fsl.ApplyWarp(interp='nn'),
+        name='unwarp_dseg'
+    )
 
     # Connect
     workflow.connect([
@@ -67,7 +72,13 @@ def init_sdc_unwarp_wf(
             ('distorted_bold','ref_file')
         ]),
         (vsm_to_warp,unwarp_bold,[('out_file','field_file')]),
-        (unwarp_bold,outputnode,[('out_file','undistorted_bold')])
+        (unwarp_bold,outputnode,[('out_file','undistorted_bold')]),
+        (inputnode,unwarp_dseg,[
+            ('dseg','in_file'),
+            ('distorted_bold','ref_file')
+        ]),
+        (vsm_to_warp,unwarp_dseg,[('out_file','field_file')]),
+        (unwarp_dseg,outputnode,[('out_file','undistorted_dseg')]),
     ])
 
     return workflow
