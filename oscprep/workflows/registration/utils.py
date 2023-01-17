@@ -21,7 +21,7 @@ def init_itk_to_fsl_affine_wf(
     """
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
    
-    from oscprep.interfaces.c3 import C3dAffineTool
+    from oscprep.interfaces.c3_to_fsl import C3dAffineTool
 
     workflow = Workflow(name=name)
 

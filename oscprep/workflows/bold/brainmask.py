@@ -3,7 +3,8 @@ import os
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
-def init_brainmask_wholebrain_bold_wf(
+def init_bold_wholebrain_brainmask_wf(
+    omp_nthreads=8,
     name='skullstrip_wholebrain_bold_wf'
 ):
     """
@@ -49,7 +50,7 @@ def init_brainmask_wholebrain_bold_wf(
     )
 
     # bbreg t1-to-wholebrain-bold
-    bbr_wf = init_bbreg_wf(use_bbr=True,bold2t1w_dof=9,bold2t1w_init='register',omp_nthreads=4)
+    bbr_wf = init_bbreg_wf(use_bbr=True,bold2t1w_dof=9,bold2t1w_init='register',omp_nthreads=omp_nthreads)
 
     # transform t1w_brainmask to wholebrain-bold space
     t1brainmask_to_bold = pe.Node(
@@ -109,7 +110,8 @@ def init_brainmask_wholebrain_bold_wf(
 
     return workflow
 
-def init_brainmask_slab_bold_wf(
+def init_bold_slab_brainmask_wf(
+    omp_nthreads=8,
     name='skullstrip_slab_bold_wf'
 ):
     """
@@ -153,7 +155,7 @@ def init_brainmask_slab_bold_wf(
     )
 
     # fsl_bbr slab-bold-to-wholebrain-bold
-    fsl_bbr_wf = init_fsl_bbr_wf(use_bbr=True,bold2t1w_dof=6,bold2t1w_init='register',omp_nthreads=4)
+    fsl_bbr_wf = init_fsl_bbr_wf(use_bbr=True,bold2t1w_dof=6,bold2t1w_init='register',omp_nthreads=omp_nthreads)
 
     # transform t1w_brainmask to wholebrain-bold space
     boldbrainmask_to_slab = pe.Node(

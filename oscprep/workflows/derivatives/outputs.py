@@ -54,12 +54,15 @@ def init_bold_brainmask_derivatives_wf(
     bold_brainmask_base,
     bold_type,
     out_path_base='brainmask',
+    name=None
 ):
     
     from niworkflows.interfaces.bids import DerivativesDataSink
     from nipype.pipeline import engine as pe
-    
-    name = f'bold_{bold_type}_brainmask_derivatives_wf'
+
+    if name is None:
+        name = f'{bold_type}_bold_brainmask_derivatives_wf'
+        
     workflow = Workflow(name=name)
     
     inputnode = pe.Node(

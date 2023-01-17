@@ -3,7 +3,7 @@ import os
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
-def init_boldref_wf(
+def init_bold_ref_wf(
     bold,
     split_vol_id=0,
     name='get_bold_reference_wf'
