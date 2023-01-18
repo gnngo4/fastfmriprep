@@ -6,7 +6,6 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
 def init_bold_sdc_wf(
-    omp_nthreads=8,
     name="bold_sdc_wf",
 ):
     
@@ -20,7 +19,6 @@ def init_bold_sdc_wf(
     inputnode = pe.Node(
         niu.IdentityInterface(
             fields=["bold_metadata","fmap","fmap_ref","target_ref","target_mask","fmap2epi_xfm"]
-            #fields=["fmap","fmap_ref","target_ref","target_mask","fmap2epi_xfm"]
         ),
         name="inputnode"
     )
@@ -32,7 +30,7 @@ def init_bold_sdc_wf(
         name="outputnode"
     )
 
-    apply_fmap_to_bold_wf = init_apply_fmap_to_bold_wf(omp_nthreads=omp_nthreads)
+    apply_fmap_to_bold_wf = init_apply_fmap_to_bold_wf()
 
     get_vsm = pe.Node(
         fsl.FUGUE(
