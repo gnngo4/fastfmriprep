@@ -13,6 +13,7 @@ BOLD_TO_T1_BASE = 'space-t1_bold.nii.gz'
 def _BoldToT1Transform(bold_path,hmc_mats,bold_to_t1_warp,t1_resampled,repetition_time):
     
     from nipype.interfaces import fsl
+    import nibabel as nib
 
     split_bold = fsl.Split(
         dimension='t',
@@ -23,7 +24,8 @@ def _BoldToT1Transform(bold_path,hmc_mats,bold_to_t1_warp,t1_resampled,repetitio
 
     vol_t1_bold = []
     assert len(bold_list) == len(hmc_mats), f"hmc mats and splitted bold data are not equal lengths."
-    for vol_mat, vol_bold in zip(hmc_mats,bold_list):
+    for ix, (vol_mat, vol_bold) in enumerate(zip(hmc_mats,bold_list)):
+
         # Combine `vol_mat` with `bold_to_t1_warp``
         convert_warp = fsl.ConvertWarp(
             reference=t1_resampled,
@@ -42,15 +44,26 @@ def _BoldToT1Transform(bold_path,hmc_mats,bold_to_t1_warp,t1_resampled,repetitio
         vol_out = res.outputs.out_file
 
         vol_t1_bold.append(vol_out)
+        
+        if ix == 0:
+            print(f"""
+            Command examples for one iteration of merging
+            hmc affine and t1 warp and applying the warp.
+            [cmd] Merge affine and warp:
+            {convert_warp.cmdline}
+            [cmd] Apply mergd warp:
+            {apply_warp.cmdline}
+            """
+            )
 
-    merge_t1_bolds = fsl.Merge(
-        in_files = vol_t1_bold,
-        dimension='t',
-        output_type='NIFTI_GZ',
-        tr=repetition_time,
-        merged_file=BOLD_TO_T1_BASE
-    )
-    merge_t1_bolds.run()
+    # Verbose    
+    print('Merge the following volumes:')
+    for _vol in vol_t1_bold:
+        print(f"    - {_vol}")
+    # Save merged volume as nifti
+    merged_nii = nib.funcs.concat_images(vol_t1_bold)
+    nib.save(merged_nii,BOLD_TO_T1_BASE)
+    # Assertion
     assert os.path.exists(BOLD_TO_T1_BASE), f"{BOLD_TO_T1_BASE} was not created."
 
 class BoldToT1TransformInputSpec(TraitedSpec):
