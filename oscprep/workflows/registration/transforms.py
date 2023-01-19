@@ -216,7 +216,9 @@ def init_wholebrain_bold_to_anat_wf(omp_nthreads=8,name="reg_wholebrain_bold_to_
                 "itk_t1_to_wholebrain_bold",
                 "fsl_wholebrain_bold_to_t1",
                 "fsl_t1_to_wholebrain_bold",
-                "undistorted_bold_dseg"
+                "undistorted_bold_dseg",
+                "undistorted_bold_to_t1",
+                "out_report",
             ]
         ),
         name="outputnode"
@@ -237,6 +239,14 @@ def init_wholebrain_bold_to_anat_wf(omp_nthreads=8,name="reg_wholebrain_bold_to_
         ),
         name='dseg_to_undistorted_wholebrain_bold'
     )
+    
+    apply_wholebrain_bold_to_t1 = pe.Node(
+        ApplyTransforms(
+            invert_transform_flags=[False],
+            interpolation='LanczosWindowedSinc'
+        ),
+        name='undistorted_wholebrain_bold_to_t1'
+    )
 
     fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(name='itk2fsl_wholebrain_bold_to_t1')
     inv_itk_to_fsl = init_itk_to_fsl_affine_wf(name='itk2fsl_t1_to_wholebrain_bold')
@@ -256,6 +266,12 @@ def init_wholebrain_bold_to_anat_wf(omp_nthreads=8,name="reg_wholebrain_bold_to_
         ]),
         (wholebrain_bold_to_anat, dseg_to_wholebrain_bold,[('outputnode.itk_t1_to_bold','transforms')]),
         (dseg_to_wholebrain_bold, outputnode, [('output_image','undistorted_bold_dseg')]),
+        (inputnode, apply_wholebrain_bold_to_t1,[
+            ('t1w_brain','reference_image'),
+            ('undistorted_bold','input_image')
+        ]),
+        (wholebrain_bold_to_anat, apply_wholebrain_bold_to_t1,[('outputnode.itk_bold_to_t1','transforms')]),
+        (apply_wholebrain_bold_to_t1, outputnode, [('output_image','undistorted_bold_to_t1')]),
         (wholebrain_bold_to_anat,outputnode,[
             ('outputnode.itk_bold_to_t1','itk_wholebrain_bold_to_t1'),
             ('outputnode.itk_t1_to_bold','itk_t1_to_wholebrain_bold')
@@ -271,7 +287,9 @@ def init_wholebrain_bold_to_anat_wf(omp_nthreads=8,name="reg_wholebrain_bold_to_
             ('t1w_brain','inputnode.source')
         ]),
         (wholebrain_bold_to_anat,inv_itk_to_fsl,[('outputnode.itk_t1_to_bold','inputnode.itk_affine')]),
-        (inv_itk_to_fsl,outputnode,[('outputnode.fsl_affine','fsl_t1_to_wholebrain_bold')])
+        (inv_itk_to_fsl,outputnode,[('outputnode.fsl_affine','fsl_t1_to_wholebrain_bold')]),
+        # report
+        (wholebrain_bold_to_anat,outputnode,[('outputnode.out_report','out_report')]),
     ])
 
     return workflow
@@ -303,6 +321,7 @@ def init_slab_bold_to_wholebrain_bold_wf(omp_nthreads=8, name="reg_slab_bold_to_
                 "itk_wholebrain_bold_to_slab_bold",
                 "fsl_slab_bold_to_wholebrain_bold",
                 "fsl_wholebrain_bold_to_slab_bold",
+                "out_report"
             ]
         ),
         name="outputnode"
@@ -340,7 +359,9 @@ def init_slab_bold_to_wholebrain_bold_wf(omp_nthreads=8, name="reg_slab_bold_to_
             ('undistorted_slab_bold','inputnode.source')
         ]),
         (slab_bold_to_wholebrain_bold,inv_itk_to_fsl,[('outputnode.itk_t1_to_bold','inputnode.itk_affine')]),
-        (inv_itk_to_fsl,outputnode,[('outputnode.fsl_affine','fsl_wholebrain_bold_to_slab_bold')])
+        (inv_itk_to_fsl,outputnode,[('outputnode.fsl_affine','fsl_wholebrain_bold_to_slab_bold')]),
+        # report
+        (slab_bold_to_wholebrain_bold,outputnode,[('outputnode.out_report','out_report')]),
     ])
 
     return workflow

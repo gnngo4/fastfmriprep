@@ -26,6 +26,9 @@ def _BoldToT1Transform(bold_path,hmc_mats,bold_to_t1_warp,t1_resampled,repetitio
     assert len(bold_list) == len(hmc_mats), f"hmc mats and splitted bold data are not equal lengths."
     for ix, (vol_mat, vol_bold) in enumerate(zip(hmc_mats,bold_list)):
 
+        if ix > 40:
+            continue
+
         # Combine `vol_mat` with `bold_to_t1_warp``
         convert_warp = fsl.ConvertWarp(
             reference=t1_resampled,

@@ -22,3 +22,68 @@ def get_bold_brainmask_source_files(bold_path):
     bold_brainmask = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('bold.nii.gz','desc-brain_mask.nii.gz')}"
 
     return bold_brain, bold_brainmask, sub_id, ses_id, run_id
+
+def get_wholebrain_bold_preproc_source_files(bold_path):
+    
+    sub_id = bold_path[bold_path.find('sub-'):].split('/')[0]
+    ses_id = bold_path[bold_path.find('ses-'):].split('/')[0]
+    run_id = bold_path[bold_path.find('run-'):].split('_')[0]
+
+    # transform
+    wholebrain_bold_to_t1_mat = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-wholebrain_to-t1_xfm.txt')}"
+
+    return {
+        "sub_id": sub_id,
+        "ses_id": ses_id,
+        "run_id": run_id,
+        "wholebrain_bold_to_t1_mat": wholebrain_bold_to_t1_mat
+    }
+
+def get_wholebrain_bold_preproc_source_files(bold_path):
+
+    sub_id = bold_path[bold_path.find('sub-'):].split('/')[0]
+    ses_id = bold_path[bold_path.find('ses-'):].split('/')[0]
+    run_id = bold_path[bold_path.find('run-'):].split('_')[0]
+    # bold
+    bold_ref = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('bold.nii.gz','space-T1w_boldref.nii.gz')}"
+    # transforms
+    wholebrain_bold_to_t1_mat = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-wholebrain_to-T1w_xfm.mat')}"
+    # report 
+    wholebrain_bold_to_t1_svg = f"{sub_id}/{ses_id}/figures/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-wholebrain_to-T1w.svg')}"
+
+    return {
+        "sub_id": sub_id,
+        "ses_id": ses_id,
+        "run_id": run_id,
+        "bold_ref": bold_ref,
+        "wholebrain_bold_to_t1_mat": wholebrain_bold_to_t1_mat,
+        "wholebrain_bold_to_t1_svg": wholebrain_bold_to_t1_svg,
+    }
+
+def get_slab_bold_preproc_source_files(bold_path):
+
+    sub_id = bold_path[bold_path.find('sub-'):].split('/')[0]
+    ses_id = bold_path[bold_path.find('ses-'):].split('/')[0]
+    run_id = bold_path[bold_path.find('run-'):].split('_')[0]
+    # bold
+    bold_ref = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('bold.nii.gz','space-T1w_boldref.nii.gz')}"
+    bold_preproc = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('bold.nii.gz','space-T1w_desc-preproc_bold.nii.gz')}"
+    # transforms
+    slab_bold_hmc_mats = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','_hmc.mats')}"
+    slab_bold_sdc_warp = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','sdc_warp.nii.gz')}"
+    slab_bold_to_wholebrain_bold_mat = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-slab_to-wholebrain_xfm.mat')}"
+    slab_bold_to_wholebrain_bold_svg = f"{sub_id}/{ses_id}/figures/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-slab_to-wholebrain.svg')}"
+    slab_bold_to_t1_warp = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-slab_to-T1w_warp.nii.gz')}"
+
+    return {
+        "sub_id": sub_id,
+        "ses_id": ses_id,
+        "run_id": run_id,
+        "bold_ref": bold_ref,
+        "bold_preproc": bold_preproc,
+        "bold_hmc": slab_bold_hmc_mats,
+        "bold_sdc_warp": slab_bold_sdc_warp,
+        "slab_bold_to_wholebrain_bold_mat": slab_bold_to_wholebrain_bold_mat,
+        "slab_bold_to_wholebrain_bold_svg": slab_bold_to_wholebrain_bold_svg,
+        "slab_bold_to_t1_warp": slab_bold_to_t1_warp
+    }

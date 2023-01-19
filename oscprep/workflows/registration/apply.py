@@ -80,6 +80,8 @@ def init_apply_bold_to_anat_wf(
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
 
     from oscprep.interfaces.bold_to_anat_transform import BoldToT1Transform
+    
+    from nipype.interfaces import fsl
 
     workflow = Workflow(name=name)
 
@@ -87,6 +89,7 @@ def init_apply_bold_to_anat_wf(
         niu.IdentityInterface(
             fields=[
                 "bold_file",
+                "bold_ref",
                 "bold_metadata",
                 "fsl_hmc_affines",
                 "bold_to_t1_warp",
@@ -98,7 +101,7 @@ def init_apply_bold_to_anat_wf(
 
     outputnode = pe.Node(
         niu.IdentityInterface(
-            fields=["t1_space_bold"]
+            fields=["t1_space_bold",'t1_space_boldref']
         ),
         name="outputnode"
     )
@@ -106,6 +109,11 @@ def init_apply_bold_to_anat_wf(
     apply_bold_to_t1 = pe.Node(
         BoldToT1Transform(),
         name="apply_bold_to_t1"
+    )
+
+    apply_bold_ref_to_t1 = pe.Node(
+        fsl.ApplyWarp(),
+        name='apply_bold_ref_to_t1'
     )
 
     workflow.connect([
@@ -116,7 +124,13 @@ def init_apply_bold_to_anat_wf(
             ("bold_to_t1_warp","bold_to_t1_warp"),
             ("t1_resampled","t1_resampled")
         ]),
-        (apply_bold_to_t1,outputnode,[('t1_bold_path','t1_space_bold')])
+        (apply_bold_to_t1,outputnode,[('t1_bold_path','t1_space_bold')]),
+        (inputnode,apply_bold_ref_to_t1,[
+            ('bold_ref','in_file'),
+            ('t1_resampled','ref_file'),
+            ('bold_to_t1_warp','field_file'),
+        ]),
+        (apply_bold_ref_to_t1,outputnode,[('out_file','t1_space_boldref')])
     ])
 
     return workflow
