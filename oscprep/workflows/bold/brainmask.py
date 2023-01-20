@@ -197,3 +197,56 @@ def init_bold_slab_brainmask_wf(
     ])
 
     return workflow
+
+def init_undistort_bold_slab_brainmask_to_t1_wf(
+    name='undistort_slab_bold_brainmask_to_t1_wf'
+):
+
+    from niworkflows.engine.workflows import LiterateWorkflow as Workflow
+    
+    from nipype.interfaces.fsl import Threshold, ApplyWarp
+
+    
+    workflow = Workflow(name=name)
+    
+    inputnode = pe.Node(
+        niu.IdentityInterface(
+            [
+                'slab_bold_brainmask', # brainmask calculated on distorted bold ref data
+                't1_warp', # fsl warp includes sdc, and slab bold to t1 affine
+                't1_resampled', # t1 resampled to bold resolution
+            ]
+        ),
+        name='inputnode',
+    )
+
+    outputnode = pe.Node(
+        niu.IdentityInterface(['t1_brainmask']),
+        name='outputnode',
+    )
+
+    apply_warp = pe.Node(
+        ApplyWarp(),
+        name='brainmask_to_t1'
+    )
+
+    mask_brainmask = pe.Node(
+        Threshold(
+            thresh=.5,
+            args='-bin -dilF',
+        ),
+        name='mask_t1_brainmask'
+    )
+
+    # connect
+    workflow.connect([
+        (inputnode,apply_warp,[
+            ('slab_bold_brainmask','in_file'),
+            ('t1_warp','field_file'),
+            ('t1_resampled','ref_file'),
+        ]),
+        (apply_warp,mask_brainmask,[('out_file','in_file')]),
+        (mask_brainmask,outputnode,[('out_file','t1_brainmask')])
+    ])
+
+    return workflow
