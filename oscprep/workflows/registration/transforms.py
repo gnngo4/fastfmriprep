@@ -192,6 +192,9 @@ def init_wholebrain_bold_to_anat_wf(omp_nthreads=8,name="reg_wholebrain_bold_to_
     from fmriprep.workflows.bold.registration import init_bbreg_wf
     
     from niworkflows.interfaces.fixes import ApplyTransforms
+    from niworkflows.interfaces.nibabel import GenerateSamplingReference
+    
+    from nipype.interfaces.fsl.maths import Threshold
 
     workflow = Workflow(name=name)
 
@@ -240,12 +243,25 @@ def init_wholebrain_bold_to_anat_wf(omp_nthreads=8,name="reg_wholebrain_bold_to_
         name='dseg_to_undistorted_wholebrain_bold'
     )
     
+    gen_ref = pe.Node(
+        GenerateSamplingReference(),
+        name='generate_reference'
+    )
+    
     apply_wholebrain_bold_to_t1 = pe.Node(
         ApplyTransforms(
             invert_transform_flags=[False],
             interpolation='LanczosWindowedSinc'
         ),
         name='undistorted_wholebrain_bold_to_t1'
+    )
+
+    threshold_zero = pe.Node(
+        Threshold(
+            direction='below',
+            thresh=0,
+        ),
+        name='threshold_wholebrain_bold_to_t1'
     )
 
     fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(name='itk2fsl_wholebrain_bold_to_t1')
@@ -266,12 +282,15 @@ def init_wholebrain_bold_to_anat_wf(omp_nthreads=8,name="reg_wholebrain_bold_to_
         ]),
         (wholebrain_bold_to_anat, dseg_to_wholebrain_bold,[('outputnode.itk_t1_to_bold','transforms')]),
         (dseg_to_wholebrain_bold, outputnode, [('output_image','undistorted_bold_dseg')]),
-        (inputnode, apply_wholebrain_bold_to_t1,[
-            ('t1w_brain','reference_image'),
-            ('undistorted_bold','input_image')
+        (inputnode,gen_ref,[
+            ('undistorted_bold','moving_image'),
+            ('t1w_brain','fixed_image')
         ]),
+        (gen_ref,apply_wholebrain_bold_to_t1,[('out_file','reference_image')]),
+        (inputnode, apply_wholebrain_bold_to_t1,[('undistorted_bold','input_image')]),
         (wholebrain_bold_to_anat, apply_wholebrain_bold_to_t1,[('outputnode.itk_bold_to_t1','transforms')]),
-        (apply_wholebrain_bold_to_t1, outputnode, [('output_image','undistorted_bold_to_t1')]),
+        (apply_wholebrain_bold_to_t1, threshold_zero, [('output_image','in_file')]),
+        (threshold_zero,outputnode,[('out_file','undistorted_bold_to_t1')]),
         (wholebrain_bold_to_anat,outputnode,[
             ('outputnode.itk_bold_to_t1','itk_wholebrain_bold_to_t1'),
             ('outputnode.itk_t1_to_bold','itk_t1_to_wholebrain_bold')
