@@ -204,7 +204,7 @@ def init_undistort_bold_slab_brainmask_to_t1_wf(
 
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
     
-    from nipype.interfaces.fsl import Threshold, ApplyWarp
+    from nipype.interfaces.fsl import Threshold, ApplyWarp, MultiImageMaths
 
     
     workflow = Workflow(name=name)
@@ -215,6 +215,7 @@ def init_undistort_bold_slab_brainmask_to_t1_wf(
                 'slab_bold_brainmask', # brainmask calculated on distorted bold ref data
                 't1_warp', # fsl warp includes sdc, and slab bold to t1 affine
                 't1_resampled', # t1 resampled to bold resolution
+                't1_boldref'
             ]
         ),
         name='inputnode',
@@ -238,6 +239,11 @@ def init_undistort_bold_slab_brainmask_to_t1_wf(
         name='mask_t1_brainmask'
     )
 
+    refine_brainmask = pe.Node(
+        MultiImageMaths(op_string="-mul %s -bin"),
+        name='refine_brainmask'
+    )
+
     # connect
     workflow.connect([
         (inputnode,apply_warp,[
@@ -246,7 +252,13 @@ def init_undistort_bold_slab_brainmask_to_t1_wf(
             ('t1_resampled','ref_file'),
         ]),
         (apply_warp,mask_brainmask,[('out_file','in_file')]),
-        (mask_brainmask,outputnode,[('out_file','t1_brainmask')])
+        (mask_brainmask,refine_brainmask,[('out_file','in_file')]),
+        (inputnode,refine_brainmask,[(('t1_boldref',_listify),'operand_files')]),
+        (refine_brainmask,outputnode,[('out_file','t1_brainmask')])
     ])
 
     return workflow
+
+def _listify(x):
+
+    return [x]

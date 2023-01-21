@@ -198,6 +198,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
                 "acompcor_masks",
                 "tcompcor_mask",
                 "crown_mask",
+                "rois_plot"
             ]
         ),
         name="outputnode",
@@ -548,6 +549,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         (subtract_mask, mrg_compcor, [("out_mask", "in3")]),
         (mrg_compcor, rois_plot, [("out", "in_rois")]),
         #(rois_plot, ds_report_bold_rois, [("out_report", "in_file")]),
+        (rois_plot, outputnode, [("out_report", "rois_plot")]),
         (tcompcor, mrg_cc_metadata, [("metadata_file", "in1")]),
         (acompcor, mrg_cc_metadata, [("metadata_file", "in2")]),
         (crowncompcor, mrg_cc_metadata, [("metadata_file", "in3")]),

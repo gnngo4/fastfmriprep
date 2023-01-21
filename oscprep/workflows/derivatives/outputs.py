@@ -185,7 +185,15 @@ def init_slab_bold_preproc_derivatives_wf(
     sub_id,
     ses_id,
     bold_ref_base,
+    bold_brainmask_base,
     bold_preproc_base,
+    bold_confounds_base,
+    bold_roi_svg_base,
+    bold_acompcor_csf_base,
+    bold_acompcor_wm_base,
+    bold_acompcor_wmcsf_base,
+    bold_tcompcor_base,
+    bold_crownmask_base,
     bold_hmc_base,
     bold_sdc_warp_base,
     slab_bold_to_wholebrain_bold_mat_base,
@@ -208,7 +216,15 @@ def init_slab_bold_preproc_derivatives_wf(
     inputnode = pe.Node(
         niu.IdentityInterface(fields=[
             'bold_ref',
+            'bold_brainmask',
             'bold_preproc',
+            'bold_confounds',
+            'bold_roi_svg',
+            'bold_acompcor_csf',
+            'bold_acompcor_wm',
+            'bold_acompcor_wmcsf',
+            'bold_tcompcor',
+            'bold_crownmask',
             'bold_hmc',
             'bold_sdc_warp',
             'slab_bold_to_wholebrain_bold_mat',
@@ -218,6 +234,18 @@ def init_slab_bold_preproc_derivatives_wf(
         name="inputnode",
     )
     
+    # Make directories
+    sub_ses_reg_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/reg"
+    sub_ses_roi_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/roi"
+    sub_ses_figures_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/figures"
+    for _dir in [
+        sub_ses_reg_dir,
+        sub_ses_roi_dir,
+        sub_ses_figures_dir
+    ]:
+        if not os.path.isdir(_dir):
+            os.makedirs(_dir)
+    
     # Bold reference image in t1 space
     ds_bold_ref = pe.Node(
         DerivativesDataSink(base_directory=output_dir, out_path_base=out_path_base,compress=True),
@@ -226,6 +254,17 @@ def init_slab_bold_preproc_derivatives_wf(
     )
     ds_bold_ref.inputs.source_file = f"{output_dir}/{bold_ref_base}"
     
+    # Bold brainmask image in t1 space
+    ds_bold_brainmask = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{bold_brainmask_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_bold_brainmask",
+        run_without_submitting=True
+    )
+    
     # Preprocessed bold in t1 space
     ds_bold_preproc = pe.Node(
         DerivativesDataSink(base_directory=output_dir, out_path_base=out_path_base,compress=True),
@@ -233,15 +272,78 @@ def init_slab_bold_preproc_derivatives_wf(
         run_without_submitting=True
     )
     ds_bold_preproc.inputs.source_file = f"{output_dir}/{bold_preproc_base}"
+
+    """
+    Confound files
+    """
+    ds_bold_confounds = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{bold_confounds_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_bold_confounds",
+        run_without_submitting=True
+    )
+    ds_bold_roi_svg = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{bold_roi_svg_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_bold_roi_svg",
+        run_without_submitting=True
+    )
+    ds_bold_acompcor_csf = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{bold_acompcor_csf_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_bold_acompcor_csf",
+        run_without_submitting=True
+    )
+    ds_bold_acompcor_wm = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{bold_acompcor_wm_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_bold_acompcor_wm",
+        run_without_submitting=True
+    )
+    ds_bold_acompcor_wmcsf = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{bold_acompcor_wmcsf_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_bold_acompcor_wmcsf",
+        run_without_submitting=True
+    )
+    ds_bold_tcompcor = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{bold_tcompcor_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_bold_tcompcor",
+        run_without_submitting=True
+    )
+    ds_bold_crownmask = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{bold_crownmask_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_bold_crownmask",
+        run_without_submitting=True
+    )
     
     """
     Transformations
     """
-    sub_ses_reg_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/reg"
-    sub_ses_figures_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/figures"
-    for _dir in [sub_ses_reg_dir,sub_ses_figures_dir]:
-        if not os.path.isdir(_dir):
-            os.makedirs(_dir)
+    
     '''
     ds_bold_hmc = pe.Node(
         ExportFile(
@@ -290,8 +392,16 @@ def init_slab_bold_preproc_derivatives_wf(
 
     workflow.connect([
         (inputnode, ds_bold_ref, [('bold_ref','in_file')]),
+        (inputnode, ds_bold_brainmask, [('bold_brainmask','in_file')]),
         (inputnode, ds_bold_preproc,[('bold_preproc','in_file')]),
         #(inputnode, ds_bold_hmc,[('bold_hmc','in_file')]),
+        (inputnode, ds_bold_confounds, [('bold_confounds','in_file')]),
+        (inputnode, ds_bold_roi_svg, [('bold_roi_svg','in_file')]),
+        (inputnode, ds_bold_acompcor_csf, [('bold_acompcor_csf','in_file')]),
+        (inputnode, ds_bold_acompcor_wm, [('bold_acompcor_wm','in_file')]),
+        (inputnode, ds_bold_acompcor_wmcsf, [('bold_acompcor_wmcsf','in_file')]),
+        (inputnode, ds_bold_tcompcor, [('bold_tcompcor','in_file')]),
+        (inputnode, ds_bold_crownmask, [('bold_crownmask','in_file')]),
         (inputnode, ds_bold_sdc,[('bold_sdc_warp','in_file')]),
         (inputnode, ds_slab_to_wholebrain_mat,[('slab_bold_to_wholebrain_bold_mat','in_file')]),
         (inputnode, ds_slab_to_wholebrain_svg,[('slab_bold_to_wholebrain_bold_svg','in_file')]),
