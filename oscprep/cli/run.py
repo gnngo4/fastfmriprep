@@ -332,6 +332,31 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
          wf.run()
          return 0
 
+    """
+    Set-up fieldmap (fmap) workflows
+    """ 
+    # get fmap given a subject and session id
+    # asserts fmap is of PHASEDIFF EstimatorType
+    # and only one fmap exists
+    fmap_estimators = find_estimators(
+        layout=layout,
+        subject=SUBJECT_ID,
+        sessions=SESSION_ID
+    )
+    assert len(fmap_estimators) == 1, f"There are {len(fmap_estimators)} fieldmap estimators. Expected is 1."
+    assert fmap_estimators[0].method == fm.EstimatorType.PHASEDIFF, f"EstimatorType is {fmap_estimators[0].method}. Expect is {fm.EstimatorType.PHASEDIFF}"
+    # Process fieldmap
+    fmap_wf = init_fmap_preproc_wf(
+        estimators=fmap_estimators,
+        omp_nthreads=OMP_NTHREADS,
+        output_dir=DERIV_DIR,
+        subject=SUBJECT_ID,
+        name='fmap_preproc_wf'
+    )
+
+    """
+    Set-up wholebrain bold workflows
+    """
     
 
 
