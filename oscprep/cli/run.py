@@ -121,6 +121,16 @@ def run():
         suffix='bold.nii.gz'
     )
     BOLD_SLAB_PATHS.sort()
+    # check if file `bold_slab` is processed, otherwise skip
+    BOLD_SLAB_PATHS_RUN = []
+    for bold_slab in BOLD_SLAB_PATHS:
+        run_flag = False
+        source_preproc_slab_bold = get_slab_bold_preproc_source_files(bold_slab)
+        for src_k, src_v in source_preproc_slab_bold.items():
+            f_exist = os.path.exists(os.path.join(DERIV_DIR,BOLD_PREPROC_DIR.split('/')[-1],src_v))
+            if src_v.endswith('.nii.gz') and f_exist:
+                run_flag=True
+        BOLD_SLAB_PATHS_RUN.append(run_flag)
 
     """
     Workflow flags
@@ -151,12 +161,17 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         print(p)
     # Slab bold paths
     print(f'----BOLD [Slab]----')
-    for p in BOLD_SLAB_PATHS:
-        print(p)
+    for run_flag,p in zip(BOLD_SLAB_PATHS_RUN,BOLD_SLAB_PATHS):
+        _s = 'Not Processed'
+        if run_flag:
+            _s = 'Processed'
+        print(f"[{_s}] {p}")
     # Workflow flags
     print('\n[Workflows]')
     for k, q in DERIV_WORKFLOW_FLAGS.items():
         print(f"{k}: {q}")
+
+    import pdb; pdb.set_trace()
 
     # Checkpoint
     if args.info_flag:
@@ -472,19 +487,12 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     """
     Set-up slab bold workflows
     """
-    for bold_idx, bold_slab in enumerate(BOLD_SLAB_PATHS):
+    for bold_idx, (run_flag, bold_slab) in enumerate(zip(BOLD_SLAB_PATHS_RUN, BOLD_SLAB_PATHS)):
         
         """
         check if file `bold_slab` is processed, otherwise skip
         """
-        skip_flag = False
-        source_preproc_slab_bold = get_slab_bold_preproc_source_files(bold_slab)
-        for src_k, src_v in source_preproc_slab_bold.items():
-            f_exist = os.path.exists(os.path.join(DERIV_DIR,BOLD_PREPROC_DIR.split('/')[-1],src_v))
-            if src_v.endswith('.nii.gz') and f_exist:
-                skip_flag=True
-                break
-        if skip_flag:
+        if run_flag:
             continue
 
         """
