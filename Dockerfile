@@ -234,4 +234,6 @@ ENV PATH="/opt/workbench/bin_linux64:$PATH" \
 
 RUN ldconfig
 
+COPY oscprep /opt/oscprep/oscprep
+
 ENTRYPOINT ["python3","/opt/oscprep/oscprep/cli/run.py"]
