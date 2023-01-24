@@ -1,3 +1,7 @@
+# singularity container
+*simg
+
+# fs license
 docker/files/freesurfer_license.txt
 
 # test
