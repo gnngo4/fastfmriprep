@@ -123,16 +123,16 @@ def run():
     BOLD_SLAB_PATHS.sort()
 
     # `bold_slab` selection filters
-    BOLD_SLAB_PATHS_RUN, BOLD_SLAB_PATHS_SELECT_TASK = [], []
+    BOLD_SLAB_PATHS_RUN, BOLD_SLAB_PATHS_SELECT_TASK, BOLD_SLAB_PATHS_SELECT_RUN = [], [], []
     for bold_slab in BOLD_SLAB_PATHS:
         # check if file `bold_slab` is already processed
-        run_flag = False
+        processed_flag = False
         source_preproc_slab_bold = get_slab_bold_preproc_source_files(bold_slab)
         for src_k, src_v in source_preproc_slab_bold.items():
             f_exist = os.path.exists(os.path.join(DERIV_DIR,BOLD_PREPROC_DIR.split('/')[-1],src_v))
             if src_v.endswith('.nii.gz') and 'func' in src_v.split('/') and f_exist:
-                run_flag=True
-        BOLD_SLAB_PATHS_RUN.append(run_flag)
+                processed_flag=True
+        BOLD_SLAB_PATHS_RUN.append(processed_flag)
         # select `bold_slab` based on `args.select_task`
         task_flag = False
         if args.select_task is None:
@@ -140,6 +140,13 @@ def run():
         if f"_task-{args.select_task}_" in bold_slab:
             task_flag = True
         BOLD_SLAB_PATHS_SELECT_TASK.append(task_flag)
+        # select `bold_slab` based on `args.select_run`
+        run_flag = False
+        if args.select_run is None:
+            run_flag = True
+        if f"_run-{args.select_run}_" in bold_slab:
+            run_flag = True
+        BOLD_SLAB_PATHS_SELECT_RUN.append(run_flag)
 
     """
     Workflow flags
@@ -172,14 +179,15 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     print('----BOLD [Slab]----')
     if args.slab_bold_quick:
         print('[slab_bold_quick] invoked.\nOnly the first 10 volumes are outputted.')
-    for run_flag,select_task_flag,p in zip(BOLD_SLAB_PATHS_RUN,BOLD_SLAB_PATHS_SELECT_TASK,BOLD_SLAB_PATHS):
-        _s = 'NP' # Not Processed
-        _t = 'O' # O == not selected
-        if run_flag:
-            _s = 'P' # Processed
+    for processed_flag,select_task_flag,select_run_flag,p in zip(BOLD_SLAB_PATHS_RUN,BOLD_SLAB_PATHS_SELECT_TASK,BOLD_SLAB_PATHS_SELECT_RUN,BOLD_SLAB_PATHS):
+        _s,_t,_r = False,False,False # Not Processed
+        if processed_flag:
+            _s = True # Processed
         if select_task_flag:
-            _t = 'X' # Selected
-        print(f"[{_s}|{_t}] {p}")
+            _t = True # Selected
+        if select_run_flag:
+            _r = True # Selected
+        print(f"[{_s}|{_t}|{_r}] {p}") # Only False | True | True are processed.
     # Workflow flags
     print('\n[Workflows]')
     for k, q in DERIV_WORKFLOW_FLAGS.items():
@@ -505,12 +513,17 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     """
     Set-up slab bold workflows
     """
-    for bold_idx, (run_flag,select_task_flag,bold_slab) in enumerate(zip(BOLD_SLAB_PATHS_RUN,BOLD_SLAB_PATHS_SELECT_TASK,BOLD_SLAB_PATHS)):
+    for bold_idx, (processed_flag,select_task_flag,select_run_flag,bold_slab) in enumerate(zip(
+        BOLD_SLAB_PATHS_RUN,
+        BOLD_SLAB_PATHS_SELECT_TASK,
+        BOLD_SLAB_PATHS_SELECT_RUN,
+        BOLD_SLAB_PATHS
+        )):
         
         """
         check if file `bold_slab` is processed and not selected, otherwise skip
         """
-        if run_flag or not select_task_flag:
+        if processed_flag or not select_task_flag or not select_run_flag:
             continue
 
         """

@@ -70,6 +70,12 @@ def setup_parser():
         default=None,
         type=str
     )
+    
+    parser.add_argument(
+        '--select_run',
+        default=None,
+        type=str
+    )
 
     """
     Debug changes
