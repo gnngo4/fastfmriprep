@@ -65,6 +65,21 @@ def setup_parser():
         help='[workflows] Enables only anatomical preprocessing workflow.'
     )
 
+    parser.add_argument(
+        '--select_task',
+        default=None,
+        type=str
+    )
+
+    """
+    Debug changes
+    """
+    parser.add_argument(
+        '--slab_bold_quick',
+        action='store_true',
+        help='[debug] Processes all slabs with only the first 10 volumes.'
+    )
+
     # Other
     parser.add_argument(
         '--mp2rage_denoise_factor',

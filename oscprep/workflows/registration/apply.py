@@ -74,6 +74,7 @@ def init_apply_fmap_to_bold_wf(name="apply_fmap_to_bold_wf"):
 
 
 def init_apply_bold_to_anat_wf(
+    slab_bold_quick=False,
     name="apply_bold_to_t1_wf"
 ):
     
@@ -107,7 +108,7 @@ def init_apply_bold_to_anat_wf(
     )
 
     apply_bold_to_t1 = pe.Node(
-        BoldToT1Transform(),
+        BoldToT1Transform(debug=slab_bold_quick),
         name="apply_bold_to_t1"
     )
 

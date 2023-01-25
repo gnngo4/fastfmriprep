@@ -121,16 +121,25 @@ def run():
         suffix='bold.nii.gz'
     )
     BOLD_SLAB_PATHS.sort()
-    # check if file `bold_slab` is processed, otherwise skip
-    BOLD_SLAB_PATHS_RUN = []
+
+    # `bold_slab` selection filters
+    BOLD_SLAB_PATHS_RUN, BOLD_SLAB_PATHS_SELECT_TASK = [], []
     for bold_slab in BOLD_SLAB_PATHS:
+        # check if file `bold_slab` is already processed
         run_flag = False
         source_preproc_slab_bold = get_slab_bold_preproc_source_files(bold_slab)
         for src_k, src_v in source_preproc_slab_bold.items():
             f_exist = os.path.exists(os.path.join(DERIV_DIR,BOLD_PREPROC_DIR.split('/')[-1],src_v))
-            if src_v.endswith('.nii.gz') and f_exist:
+            if src_v.endswith('.nii.gz') and 'func' in src_v.split('/') and f_exist:
                 run_flag=True
         BOLD_SLAB_PATHS_RUN.append(run_flag)
+        # select `bold_slab` based on `args.select_task`
+        task_flag = False
+        if args.select_task is None:
+            task_flag = True
+        if f"_task-{args.select_task}_" in bold_slab:
+            task_flag = True
+        BOLD_SLAB_PATHS_SELECT_TASK.append(task_flag)
 
     """
     Workflow flags
@@ -156,22 +165,25 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     for k, q in ANAT_FILES.items():
         print(f'{k}: {q}')
     # Wholebrain bold path
-    print(f'----BOLD [Whole Brain]----')
+    print('----BOLD [Whole Brain]----')
     for p in BOLD_WHOLEBRAIN_PATHS:
         print(p)
     # Slab bold paths
-    print(f'----BOLD [Slab]----')
-    for run_flag,p in zip(BOLD_SLAB_PATHS_RUN,BOLD_SLAB_PATHS):
-        _s = 'Not Processed'
+    print('----BOLD [Slab]----')
+    if args.slab_bold_quick:
+        print('[slab_bold_quick] invoked.\nOnly the first 10 volumes are outputted.')
+    for run_flag,select_task_flag,p in zip(BOLD_SLAB_PATHS_RUN,BOLD_SLAB_PATHS_SELECT_TASK,BOLD_SLAB_PATHS):
+        _s = 'NP' # Not Processed
+        _t = 'O' # O == not selected
         if run_flag:
-            _s = 'Processed'
-        print(f"[{_s}] {p}")
+            _s = 'P' # Processed
+        if select_task_flag:
+            _t = 'X' # Selected
+        print(f"[{_s}|{_t}] {p}")
     # Workflow flags
     print('\n[Workflows]')
     for k, q in DERIV_WORKFLOW_FLAGS.items():
         print(f"{k}: {q}")
-
-    import pdb; pdb.set_trace()
 
     # Checkpoint
     if args.info_flag:
@@ -181,8 +193,14 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     """
     Initialize workflow
     """
+    workflow_suffix = ''
+    if args.anat_flag:
+        workflow_suffix = 'anat_only_'
     _OSCPREP_VERSION = str(OSCPREP_VERSION).replace('.','_')
-    wf = Workflow(name=f'oscprep_sub-{SUBJECT_ID}_session-{SESSION_ID}_v{_OSCPREP_VERSION}', base_dir=args.scratch_dir)
+    wf = Workflow(
+        name=f'oscprep_sub-{SUBJECT_ID}_session-{SESSION_ID}_{workflow_suffix}v{_OSCPREP_VERSION}',
+        base_dir=args.scratch_dir
+    )
 
     """
     Set-up anatomical workflows
@@ -487,12 +505,12 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     """
     Set-up slab bold workflows
     """
-    for bold_idx, (run_flag, bold_slab) in enumerate(zip(BOLD_SLAB_PATHS_RUN, BOLD_SLAB_PATHS)):
+    for bold_idx, (run_flag,select_task_flag,bold_slab) in enumerate(zip(BOLD_SLAB_PATHS_RUN,BOLD_SLAB_PATHS_SELECT_TASK,BOLD_SLAB_PATHS)):
         
         """
-        check if file `bold_slab` is processed, otherwise skip
+        check if file `bold_slab` is processed and not selected, otherwise skip
         """
-        if run_flag:
+        if run_flag or not select_task_flag:
             continue
 
         """
@@ -622,7 +640,10 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         # get slab bold brainmask in t1 space
         trans_slab_bold_brainmask_to_anat_wf = init_undistort_bold_slab_brainmask_to_t1_wf(name=f"trans_{bold_slab_base}_brainmask_to_t1")
         # apply all transformations to slab bold
-        trans_slab_bold_to_anat_wf = init_apply_bold_to_anat_wf(name=f"trans_{bold_slab_base}_to_t1_wf")
+        trans_slab_bold_to_anat_wf = init_apply_bold_to_anat_wf(
+            slab_bold_quick=args.slab_bold_quick,
+            name=f"trans_{bold_slab_base}_to_t1_wf"
+        )
         trans_slab_bold_to_anat_wf.inputs.inputnode.bold_metadata = metadata
         
         # connect
@@ -683,6 +704,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         """
         save slab preproc bold data to derivative directories
         """
+        source_preproc_slab_bold = get_slab_bold_preproc_source_files(bold_slab)
         slab_bold_preproc_derivatives_wf = init_slab_bold_preproc_derivatives_wf(
             DERIV_DIR,
             source_preproc_slab_bold['sub_id'],

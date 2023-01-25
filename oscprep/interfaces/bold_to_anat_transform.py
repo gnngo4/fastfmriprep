@@ -10,7 +10,7 @@ import os
 
 BOLD_TO_T1_BASE = 'space-t1_bold.nii.gz'
 
-def _BoldToT1Transform(bold_path,hmc_mats,bold_to_t1_warp,t1_resampled,repetition_time):
+def _BoldToT1Transform(bold_path,hmc_mats,bold_to_t1_warp,t1_resampled,repetition_time,debug):
     
     from nipype.interfaces import fsl
     import nibabel as nib
@@ -26,8 +26,8 @@ def _BoldToT1Transform(bold_path,hmc_mats,bold_to_t1_warp,t1_resampled,repetitio
     assert len(bold_list) == len(hmc_mats), f"hmc mats and splitted bold data are not equal lengths."
     for ix, (vol_mat, vol_bold) in enumerate(zip(hmc_mats,bold_list)):
 
-        #if ix > 40:
-        #    continue
+        if debug and ix == 10:
+            break
 
         # Combine `vol_mat` with `bold_to_t1_warp``
         convert_warp = fsl.ConvertWarp(
@@ -75,6 +75,7 @@ class BoldToT1TransformInputSpec(TraitedSpec):
     bold_to_t1_warp = File(exists=True,desc="bold to t1 warp",mandatory=True)
     t1_resampled = File(exists=True,desc="t1 resampled to resolution of bold data",mandatory=True)
     repetition_time = traits.Float(desc="repetition time (TR)",mandatory=True)
+    debug = traits.Bool(desc="debug generates bold images with the first 10 volumes",mandatory=True)
 
 class BoldToT1TransformOutputSpec(TraitedSpec):
     t1_bold_path = File(exists=True,desc="transformed-to-t1 bold path")
@@ -91,7 +92,8 @@ class BoldToT1Transform(SimpleInterface):
             self.inputs.hmc_mats,
             self.inputs.bold_to_t1_warp,
             self.inputs.t1_resampled,
-            self.inputs.repetition_time
+            self.inputs.repetition_time,
+            self.inputs.debug
         )
 
         return runtime
