@@ -40,7 +40,7 @@ def run():
         init_bold_slab_brainmask_wf,
         init_undistort_bold_slab_brainmask_to_t1_wf
     )
-    from fmriprep.workflows.bold import init_bold_stc_wf 
+    from oscprep.workflows.bold.stc import init_bold_stc_wf
     from oscprep.workflows.bold.hmc import init_bold_hmc_wf
     from oscprep.workflows.bold.sdc import init_bold_sdc_wf
     from oscprep.workflows.registration.transforms import (
