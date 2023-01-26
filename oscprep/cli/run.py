@@ -9,6 +9,14 @@ def run():
     from nipype.interfaces.utility import IdentityInterface
     from bids import BIDSLayout
 
+    """
+    computecanada gives a TLS CA certificate bundle error
+    Solution:
+    https://stackoverflow.com/questions/46119901/python-requests-cant-find-a-folder-with-a-certificate-when-converted-to-exe
+    """
+    import certifi
+    os.environ['REQUESTS_CA_BUNDLE'] = os.path.join(os.path.dirname(sys.argv[0]), certifi.where())
+
     sys.path.insert(1, '/opt/oscprep')
     # utils
     from oscprep.cli.parser import setup_parser
@@ -40,7 +48,7 @@ def run():
         init_bold_slab_brainmask_wf,
         init_undistort_bold_slab_brainmask_to_t1_wf
     )
-    from oscprep.workflows.bold.stc import init_bold_stc_wf
+    from fmriprep.workflows.bold.stc import init_bold_stc_wf
     from oscprep.workflows.bold.hmc import init_bold_hmc_wf
     from oscprep.workflows.bold.sdc import init_bold_sdc_wf
     from oscprep.workflows.registration.transforms import (
@@ -204,6 +212,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     workflow_suffix = ''
     if args.anat_flag:
         workflow_suffix = 'anat_only_'
+    if args.slab_bold_quick:
+        workflow_suffix = 'bold_quick_'
     _OSCPREP_VERSION = str(OSCPREP_VERSION).replace('.','_')
     wf = Workflow(
         name=f'oscprep_sub-{SUBJECT_ID}_session-{SESSION_ID}_{workflow_suffix}v{_OSCPREP_VERSION}',
