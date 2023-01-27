@@ -96,6 +96,7 @@ def run():
     SMRIPREP_DIR = f"{DERIV_DIR}/smriprep"
     FREESURFER_DIR = f"{DERIV_DIR}/freesurfer"
     BOLD_PREPROC_DIR = f"{DERIV_DIR}/bold_preproc"
+    SDCFLOWS_DIR = f"{DERIV_DIR}/sdcflows"
     ## Make empty freesurfer directory
     for _dir in [DERIV_DIR,FREESURFER_DIR]:
         if not os.path.isdir(_dir): 
@@ -162,6 +163,11 @@ def run():
     DERIV_WORKFLOW_FLAGS = {}
     DERIV_WORKFLOW_FLAGS['anat_brainmask'] = os.path.isdir(f"{BRAINMASK_DIR}/{ANAT_SUBJECT_ID}/{ANAT_SESSION_ID}/anat")
     DERIV_WORKFLOW_FLAGS['anat_preproc'] = os.path.isdir(f"{SMRIPREP_DIR}/sub-{SUBJECT_ID}")
+    DERIV_WORKFLOW_FLAGS['fmap_preproc'] = os.path.isdir(f"{SDCFLOWS_DIR}/sub-{SUBJECT_ID}/ses-{SESSION_ID}")
+    """
+    TODO: Implement this after fmap buffers are added
+    """
+    #DERIV_WORKFLOW_FLAGS['wholebrain_bold_preproc'] = os.listdir(f"{BOLD_PREPROC_DIR}/sub-{SUBJECT_ID}/ses-{SESSION_ID}/func/")
     # Print
     print(f"""\n[CONFIG]
 SUBJECT_ID: {SUBJECT_ID}
@@ -389,24 +395,57 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     """
     Set-up fieldmap (fmap) workflows
     """ 
-    # get fmap given a subject and session id
-    # asserts fmap is of PHASEDIFF EstimatorType
-    # and only one fmap exists
-    fmap_estimators = find_estimators(
-        layout=layout,
-        subject=SUBJECT_ID,
-        sessions=SESSION_ID
+    # fmap_buffer
+    fmap_buffer = pe.Node(
+        niu.IdentityInterface(
+            [
+                'fmap_ref', # fmap_wf 
+                'fmap', # fmap_wf
+            ]
+        ),
+        name='fmap_buffer'
     )
-    assert len(fmap_estimators) == 1, f"There are {len(fmap_estimators)} fieldmap estimators. Expected is 1."
-    assert fmap_estimators[0].method == fm.EstimatorType.PHASEDIFF, f"EstimatorType is {fmap_estimators[0].method}. Expect is {fm.EstimatorType.PHASEDIFF}"
-    # Process fieldmap
-    fmap_wf = init_fmap_preproc_wf(
-        estimators=fmap_estimators,
-        omp_nthreads=OMP_NTHREADS,
-        output_dir=DERIV_DIR,
-        subject=SUBJECT_ID,
-        name='fmap_preproc_wf'
-    )
+
+    if not DERIV_WORKFLOW_FLAGS['fmap_preproc']:
+        
+        # get fmap given a subject and session id
+        # asserts fmap is of PHASEDIFF EstimatorType
+        # and only one fmap exists
+        fmap_estimators = find_estimators(
+            layout=layout,
+            subject=SUBJECT_ID,
+            sessions=SESSION_ID
+        )
+        assert len(fmap_estimators) == 1, f"There are {len(fmap_estimators)} fieldmap estimators. Expected is 1."
+        assert fmap_estimators[0].method == fm.EstimatorType.PHASEDIFF, f"EstimatorType is {fmap_estimators[0].method}. Expect is {fm.EstimatorType.PHASEDIFF}"
+        # Process fieldmap
+        fmap_wf = init_fmap_preproc_wf(
+            estimators=fmap_estimators,
+            omp_nthreads=OMP_NTHREADS,
+            output_dir=DERIV_DIR,
+            subject=SUBJECT_ID,
+            name='fmap_preproc_wf'
+        )
+        # connect
+        wf.connect([
+            (fmap_wf,fmap_buffer,[
+                (('outputnode.fmap_ref',_get_element,0),'fmap_ref'),
+                (('outputnode.fmap',_get_element,0),'fmap'),
+            ])
+        ])
+
+    else:
+        
+        # ``fmap_wf`` should produce the following:
+        fmap_preproc_base = f"{SDCFLOWS_DIR}/sub-{SUBJECT_ID}/ses-{SESSION_ID}/fmap/sub-{SUBJECT_ID}_ses-{SESSION_ID}_fmapid-auto00000"
+        fmap_inputs = {
+            'fmap_ref': f"{fmap_preproc_base}_desc-magnitude_fieldmap.nii.gz",
+            'fmap': f"{fmap_preproc_base}_desc-preproc_fieldmap.nii.gz",
+        }
+        # set fmap_buffer inputs
+        for _key, _path in fmap_inputs.items():
+            assert os.path.exists(_path), f"{_path} does not exist."
+            setattr(fmap_buffer.inputs, _key, _path)
 
     """
     Set-up wholebrain bold workflows
@@ -471,14 +510,14 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             ('outputnode.brain','inputnode.bold_brain'),
             ('outputnode.brainmask','inputnode.bold_brainmask'),
         ]),
-        (fmap_wf,anat_to_fmap_wf,[(('outputnode.fmap_ref',_get_element,0),'inputnode.fmap_ref')]),
+        (fmap_buffer,anat_to_fmap_wf,[('fmap_ref','inputnode.fmap_ref')]),
         (anat_buffer,anat_to_fmap_wf,[('fs_t1w_brain','inputnode.anat')]),
         (anat_to_fmap_wf,fmap_to_wholebrain_bold_wf,[('outputnode.itk_fmap2anat','inputnode.itk_fmap2anat')]),
         (wholebrain_bold_brainmask_wf,fmap_to_wholebrain_bold_wf,[('outputnode.itk_t1_to_bold','inputnode.itk_anat2wholebrainbold')]),
         (fmap_to_wholebrain_bold_wf,wholebrain_bold_unwarp_wf,[('outputnode.itk_fmap2epi','inputnode.fmap2epi_xfm')]),
-        (fmap_wf,wholebrain_bold_unwarp_wf,[
-            (('outputnode.fmap_ref',_get_element,0),'inputnode.fmap_ref'),
-            (('outputnode.fmap',_get_element,0),'inputnode.fmap'),
+        (fmap_buffer,wholebrain_bold_unwarp_wf,[
+            ('fmap_ref','inputnode.fmap_ref'),
+            ('fmap','inputnode.fmap'),
         ]),
         (wholebrain_bold_brainmask_wf,wholebrain_bold_unwarp_wf,[
             ('outputnode.brain','inputnode.target_ref'),
@@ -633,9 +672,9 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             (slab_bold_brainmask_wf,fmap_to_slab_bold_wf,[
                 ('outputnode.itk_t1_to_bold','inputnode.itk_wholebrainbold2slabbold')]),
             (fmap_to_slab_bold_wf,slab_bold_unwarp_wf,[('outputnode.itk_fmap2epi','inputnode.fmap2epi_xfm')]),
-            (fmap_wf,slab_bold_unwarp_wf,[
-                (('outputnode.fmap_ref',_get_element,0),'inputnode.fmap_ref'),
-                (('outputnode.fmap',_get_element,0),'inputnode.fmap'),
+            (fmap_buffer,slab_bold_unwarp_wf,[
+                ('fmap_ref','inputnode.fmap_ref'),
+                ('fmap','inputnode.fmap'),
             ]),
             (slab_bold_brainmask_wf,slab_bold_unwarp_wf,[
                 ('outputnode.brain','inputnode.target_ref'),
