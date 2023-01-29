@@ -34,6 +34,23 @@ def get_wholebrain_bold_preproc_source_files(bold_path):
     wholebrain_bold_to_t1_mat = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-wholebrain_to-T1w_xfm.mat')}"
     # report 
     wholebrain_bold_to_t1_svg = f"{sub_id}/{ses_id}/figures/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-wholebrain_to-T1w.svg')}"
+    # distorted
+    # brainmask wf
+    distorted_boldref = f"{sub_id}/{ses_id}/wholebrain_bold/distorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','boldref.nii.gz')}"
+    distorted_brainmask = f"{sub_id}/{ses_id}/wholebrain_bold/distorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','brainmask.nii.gz')}"
+    distorted_dseg = f"{sub_id}/{ses_id}/wholebrain_bold/distorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','dseg.nii.gz')}"
+    distorted_itk_bold_to_t1 = f"{sub_id}/{ses_id}/wholebrain_bold/distorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-wholebrain_to-t1_xfm.itk.txt')}"
+    distorted_itk_t1_to_bold = f"{sub_id}/{ses_id}/wholebrain_bold/distorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-t1_to-wholebrain_xfm.itk.txt')}"
+    # undistorted
+    # to_anat_wf
+    undistorted_itk_bold_to_t1 = f"{sub_id}/{ses_id}/wholebrain_bold/undistorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','proc-sdc_from-wholebrain_to-t1_xfm.itk.txt')}"
+    undistorted_itk_t1_to_bold = f"{sub_id}/{ses_id}/wholebrain_bold/undistorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','proc-sdc_from-t1_to-wholebrain_xfm.itk.txt')}"
+    undistorted_fsl_bold_to_t1 = f"{sub_id}/{ses_id}/wholebrain_bold/undistorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','proc-sdc_from-wholebrain_to-t1_xfm.fsl.mat')}"
+    undistorted_fsl_t1_to_bold = f"{sub_id}/{ses_id}/wholebrain_bold/undistorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','proc-sdc_from-t1_to-wholebrain_xfm.fsl.mat')}"
+    undistorted_dseg = f"{sub_id}/{ses_id}/wholebrain_bold/undistorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','proc-sdc_dseg.nii.gz')}"
+    undistorted_spacet1_boldref = f"{sub_id}/{ses_id}/wholebrain_bold/undistorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','space-T1w_proc-sdc_boldref.nii.gz')}"
+    # sdc_wf
+    undistorted_boldref = f"{sub_id}/{ses_id}/wholebrain_bold/undistorted/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','proc-sdc_boldref.nii.gz')}"
 
     return {
         "sub_id": sub_id,
@@ -42,6 +59,18 @@ def get_wholebrain_bold_preproc_source_files(bold_path):
         "bold_ref": bold_ref,
         "wholebrain_bold_to_t1_mat": wholebrain_bold_to_t1_mat,
         "wholebrain_bold_to_t1_svg": wholebrain_bold_to_t1_svg,
+        "distorted_boldref": distorted_boldref,
+        "distorted_brainmask": distorted_brainmask,
+        "distorted_dseg": distorted_dseg,
+        "distorted_itk_bold_to_t1": distorted_itk_bold_to_t1,
+        "distorted_itk_t1_to_bold": distorted_itk_t1_to_bold,
+        "undistorted_itk_bold_to_t1": undistorted_itk_bold_to_t1,
+        "undistorted_itk_t1_to_bold": undistorted_itk_t1_to_bold,
+        "undistorted_fsl_bold_to_t1": undistorted_fsl_bold_to_t1,
+        "undistorted_fsl_t1_to_bold": undistorted_fsl_t1_to_bold,
+        "undistorted_dseg": undistorted_dseg,
+        "undistorted_spacet1_boldref": undistorted_spacet1_boldref,
+        "undistorted_boldref": undistorted_boldref,
     }
 
 def get_slab_bold_preproc_source_files(bold_path):
