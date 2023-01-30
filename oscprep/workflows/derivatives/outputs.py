@@ -195,6 +195,17 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         run_without_submitting=True
     )
 
+    """
+    wholebrain bold preprocessing (prereqs for running slab bold preprocessing)
+    """
+    sub_ses_wholebrain_bold_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/wholebrain_bold"
+    for _dir in [sub_ses_wholebrain_bold_dir]:
+        if not os.path.isdir(_dir):
+            os.makedirs(_dir)
+        for _subdir in ['distorted','undistorted']:
+            if not os.path.isdir(f"{_dir}/{_subdir}"):
+                os.makedirs(f"{_dir}/{_subdir}")
+                
     ds_distorted_boldref = pe.Node(
         ExportFile(
             out_file=f"{output_dir}/{out_path_base}/{distorted_boldref_base}",
@@ -225,6 +236,7 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         run_without_submitting=True
     )
 
+    """
     ds_distorted_itk_bold_to_t1 = pe.Node(
         ExportFile(
             out_file=f"{output_dir}/{out_path_base}/{distorted_itk_bold_to_t1_base}",
@@ -234,6 +246,7 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         name=f"ds_{workflow_name_base}_distorted_itk_bold_to_t1",
         run_without_submitting=True
     )
+    """
 
     ds_distorted_itk_t1_to_bold = pe.Node(
         ExportFile(
@@ -245,6 +258,7 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         run_without_submitting=True
     )
 
+    """
     ds_undistorted_itk_bold_to_t1 = pe.Node(
         ExportFile(
             out_file=f"{output_dir}/{out_path_base}/{undistorted_itk_bold_to_t1_base}",
@@ -254,7 +268,9 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         name=f"ds_{workflow_name_base}_undistorted_itk_bold_to_t1",
         run_without_submitting=True
     )
+    """
 
+    """
     ds_undistorted_itk_t1_to_bold = pe.Node(
         ExportFile(
             out_file=f"{output_dir}/{out_path_base}/{undistorted_itk_t1_to_bold_base}",
@@ -264,6 +280,7 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         name=f"ds_{workflow_name_base}_undistorted_itk_t1_to_bold",
         run_without_submitting=True
     )
+    """
 
     ds_undistorted_fsl_bold_to_t1 = pe.Node(
         ExportFile(
@@ -275,15 +292,17 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         run_without_submitting=True
     )
 
+    """
     ds_undistorted_fsl_t1_to_bold = pe.Node(
         ExportFile(
             out_file=f"{output_dir}/{out_path_base}/{undistorted_fsl_t1_to_bold_base}",
             check_extension=False,
             clobber=True
         ),
-        name=f"ds_{workflow_name_base}_undistorted_fsl_t1_to_bold"
+        name=f"ds_{workflow_name_base}_undistorted_fsl_t1_to_bold",
         run_without_submitting=True
     )
+    """
 
     ds_undistorted_dseg = pe.Node(
         ExportFile(
@@ -295,6 +314,7 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         run_without_submitting=True
     )
 
+    """
     ds_undistorted_spacet1_boldref = pe.Node(
         ExportFile(
             out_file=f"{output_dir}/{out_path_base}/{undistorted_spacet1_boldref_base}",
@@ -304,6 +324,7 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         name=f"ds_{workflow_name_base}_undistorted_spacet1_boldref",
         run_without_submitting=True
     )
+    """
 
     ds_undistorted_boldref = pe.Node(
         ExportFile(
@@ -322,14 +343,14 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         (inputnode, ds_distorted_boldref,[('distorted_boldref','in_file')]),
         (inputnode, ds_distorted_brainmask,[('distorted_brainmask','in_file')]),
         (inputnode, ds_distorted_dseg,[('distorted_dseg','in_file')]),
-        (inputnode, ds_distorted_itk_bold_to_t1,[('distorted_itk_bold_to_t1','in_file')]),
+        #(inputnode, ds_distorted_itk_bold_to_t1,[('distorted_itk_bold_to_t1','in_file')]),
         (inputnode, ds_distorted_itk_t1_to_bold,[('distorted_itk_t1_to_bold','in_file')]),
-        (inputnode, ds_undistorted_itk_bold_to_t1,[('undistorted_itk_bold_to_t1','in_file')]),
-        (inputnode, ds_undistorted_itk_t1_to_bold,[('undistorted_itk_t1_to_bold','in_file')]),
+        #(inputnode, ds_undistorted_itk_bold_to_t1,[('undistorted_itk_bold_to_t1','in_file')]),
+        #(inputnode, ds_undistorted_itk_t1_to_bold,[('undistorted_itk_t1_to_bold','in_file')]),
         (inputnode, ds_undistorted_fsl_bold_to_t1,[('undistorted_fsl_bold_to_t1','in_file')]),
-        (inputnode, ds_undistorted_fsl_t1_to_bold,[('undistorted_fsl_t1_to_bold','in_file')]),
+        #(inputnode, ds_undistorted_fsl_t1_to_bold,[('undistorted_fsl_t1_to_bold','in_file')]),
         (inputnode, ds_undistorted_dseg,[('undistorted_dseg','in_file')]),
-        (inputnode, ds_undistorted_spacet1_boldref,[('undistorted_spacet1_boldref','in_file')]),
+        #(inputnode, ds_undistorted_spacet1_boldref,[('undistorted_spacet1_boldref','in_file')]),
         (inputnode, ds_undistorted_boldref,[('undistorted_boldref','in_file')]),
     ])
     

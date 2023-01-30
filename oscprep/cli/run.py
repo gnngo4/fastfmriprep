@@ -444,6 +444,13 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             assert os.path.exists(_path), f"{_path} does not exist."
             setattr(fmap_buffer.inputs, _key, _path)
 
+    # register anat to fmap
+    anat_to_fmap_wf = init_anat_to_fmap(name='reg_anat_to_fmap_wf')
+    wf.connect([
+        (fmap_buffer,anat_to_fmap_wf,[('fmap_ref','inputnode.fmap_ref')]),
+        (anat_buffer,anat_to_fmap_wf,[('fs_t1w_brain','inputnode.anat')]),
+    ])
+
     """
     Set-up wholebrain bold workflows
     """
@@ -497,8 +504,6 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         """
         apply fmap to wholebrain bold workflows
         """
-        # register anat to fmap
-        anat_to_fmap_wf = init_anat_to_fmap(name='reg_anat_to_fmap_wf')
         # register fmap to wholebrain bold
         fmap_to_wholebrain_bold_wf = init_fmap_to_wholebrain_bold_wf(name='reg_fmap_to_wholebrain_bold_wf')
         # apply sdc to wholebrain bold
@@ -526,8 +531,6 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 ('outputnode.brain','inputnode.bold_brain'),
                 ('outputnode.brainmask','inputnode.bold_brainmask'),
             ]),
-            (fmap_buffer,anat_to_fmap_wf,[('fmap_ref','inputnode.fmap_ref')]),
-            (anat_buffer,anat_to_fmap_wf,[('fs_t1w_brain','inputnode.anat')]),
             (anat_to_fmap_wf,fmap_to_wholebrain_bold_wf,[('outputnode.itk_fmap2anat','inputnode.itk_fmap2anat')]),
             (wholebrain_bold_brainmask_wf,fmap_to_wholebrain_bold_wf,[('outputnode.itk_t1_to_bold','inputnode.itk_anat2wholebrainbold')]),
             (fmap_to_wholebrain_bold_wf,wholebrain_bold_unwarp_wf,[('outputnode.itk_fmap2epi','inputnode.fmap2epi_xfm')]),
@@ -630,7 +633,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             'undistorted_fsl_bold_to_t1': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['undistorted_fsl_bold_to_t1']}",
             'undistorted_boldref': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['undistorted_boldref']}",
         }
-        # set fmap_buffer inputs
+        # set wholebrain_bold_buffer inputs
         for _key, _path in wholebrain_bold_inputs.items():
             assert os.path.exists(_path), f"{_path} does not exist."
             setattr(wholebrain_bold_buffer.inputs, _key, _path)
