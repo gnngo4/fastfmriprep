@@ -117,7 +117,7 @@ def setup_parser():
         '--bold_hmc_lowpass_threshold',
         default=.2,
         type=float,
-        help='[bold-hmc] estimate hmc parameters with lowpass filtered BOLD data (applied to non-filtered data).'
+        help='[bold-hmc] estimate hmc parameters with lowpass filtered BOLD data (applied to non-filtered data). default=0.2.'
     )
     
     return parser
