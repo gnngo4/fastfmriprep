@@ -30,7 +30,16 @@ class bids_reader:
         
         return session_list
     
-    def get_bold_list(self, subj_id, sess_id, ignore_tasks = [], specific_task = None, full_path_flag=False, suffix='bold.nii.gz'):
+    def get_bold_list(
+            self,
+            subj_id,
+            sess_id,
+            ignore_tasks = [],
+            ignore_phase = True,
+            specific_task = None,
+            full_path_flag=False,
+            suffix='bold.nii.gz'
+        ):
         """
         Returns a list of the bold runs in the bids/{subj_id}/{sess_id}/func folder
         """
@@ -62,6 +71,9 @@ class bids_reader:
                     func_list.append(i)
                 
         func_list.sort()
+
+        if ignore_phase:
+            func_list = [bold for bold in func_list if not 'part-phase' in bold]
             
         if full_path_flag:
             return [f"{func_dir}/{i}" for i in func_list]

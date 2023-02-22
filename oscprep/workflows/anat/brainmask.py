@@ -130,8 +130,59 @@ def init_brainmask_mp2rage_wf(
 
     return workflow
                 
-def init_brainmask_mprage_wf():
-    pass
+def init_brainmask_mprage_wf(
+    name='skullstrip_mprage_wf'
+):
+    """
+    Skullstrip 3T MPRAGE image
+
+    Parameters
+    ----------
+
+    Inputs
+    ------
+
+    Outputs
+    -------
+
+    """
+    from niworkflows.engine.workflows import LiterateWorkflow as Workflow
+
+    from oscprep.interfaces.custom_synthstrip import SynthStrip
+    
+    workflow = Workflow(name=name)
+
+    inputnode = pe.Node(
+        niu.IdentityInterface(['mprage','no_csf']),
+        name='inputnode',
+    )
+
+    outputnode = pe.Node(
+        niu.IdentityInterface(['mprage_brain','mprage_brainmask']),
+        name='outputnode',
+    )
+
+    # Skullstrip MPRAGE at native resolution
+    synthstrip_native = pe.Node(
+        SynthStrip(
+            out_file='brain.nii.gz',mask_file='mask.nii.gz'
+        ),
+        name='synthstrip_native',
+    )
+
+    # Connect nodes
+    workflow.connect([
+        (inputnode, synthstrip_native, [
+            ('mprage','in_file'),
+            ('no_csf','no_csf')
+        ]),
+        (synthstrip_native,outputnode,[
+            ('out_file','mprage_brain'),
+            ('mask_file','mprage_brainmask')
+        ])
+    ])
+
+    return workflow
 
 def _listify(x):
     return [x]

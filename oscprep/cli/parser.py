@@ -106,6 +106,12 @@ def setup_parser():
         type=float,
         help='[mp2rage] synthstrip upsample resolution (used to dilate brainmasking).'
     )
+    
+    parser.add_argument(
+        '--mprage_synthstrip_no_csf_flag',
+        action='store_true',
+        help='[mprage] Enable synthstrip `no_csf` option.'
+    )
 
     parser.add_argument(
         '--bold_hmc_lowpass_threshold',

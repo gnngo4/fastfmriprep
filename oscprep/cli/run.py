@@ -35,7 +35,6 @@ def run():
         init_slab_bold_preproc_derivatives_wf,
     )
     # anatomical workflows
-    from oscprep.workflows.anat.brainmask import init_brainmask_mp2rage_wf 
     from smriprep.workflows.anatomical import init_anat_preproc_wf
     # fieldmap workflows
     from sdcflows import fieldmaps as fm
@@ -85,6 +84,8 @@ def run():
     MP2RAGE_DENOISE_FACTOR = args.mp2rage_denoise_factor
     MP2RAGE_SYNTHSTRIP_NO_CSF = args.mp2rage_synthstrip_no_csf_flag
     MP2RAGE_SYNTHSTRIP_UPSAMPLE_RESOLUTION = args.mp2rage_synthstrip_res
+    # mprage
+    MPRAGE_SYNTHSTRIP_NO_CSF = args.mprage_synthstrip_no_csf_flag
     # bold
     BOLD_HMC_LOWPASS_THRESHOLD = args.bold_hmc_lowpass_threshold
 
@@ -249,6 +250,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
 
     if not DERIV_WORKFLOW_FLAGS['anat_brainmask']:
         if ANAT_ACQ == 'MP2RAGE':
+            from oscprep.workflows.anat.brainmask import init_brainmask_mp2rage_wf 
             # mp2rage brainmask workflow
             brainmask_wf = init_brainmask_mp2rage_wf()
             brainmask_inputnode = pe.Node(
@@ -297,7 +299,39 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 (anat_brainmask_derivatives_wf,anat_bm_buffer,[('outputnode.t1w_brain','t1w_brain')])
             ])
         elif ANAT_ACQ == 'MPRAGE':
-            NotImplemented
+            from oscprep.workflows.anat.brainmask import init_brainmask_mprage_wf 
+            # mp2rage brainmask workflow
+            brainmask_wf = init_brainmask_mprage_wf()
+            brainmask_inputnode = pe.Node(
+                niu.IdentityInterface(
+                    [
+                        'mprage',
+                        'no_csf', # synthstrip on native t1w
+                    ]
+                ),
+                name='brainmask_inputnode'
+            )
+            brainmask_inputnode.inputs.mprage = ANAT_FILES['T1w']
+            brainmask_inputnode.inputs.no_csf = MPRAGE_SYNTHSTRIP_NO_CSF
+            # mprage brainmask derivatives workflow
+            anat_brainmask_derivatives_wf = init_anat_brainmask_derivatives_wf(
+                DERIV_DIR,
+                source_brain,
+                source_brainmask,
+                out_path_base=BRAINMASK_DIR.split('/')[-1]
+            )
+            # connect
+            wf.connect([
+                (brainmask_inputnode,brainmask_wf,[
+                    ('mprage','inputnode.mprage'),
+                    ('no_csf','inputnode.no_csf'),
+                ]),
+                (brainmask_wf, anat_brainmask_derivatives_wf,[
+                    ('outputnode.mprage_brain','inputnode.t1w_brain'),
+                    ('outputnode.mprage_brainmask','inputnode.t1w_brainmask')
+                ]),
+                (anat_brainmask_derivatives_wf,anat_bm_buffer,[('outputnode.t1w_brain','t1w_brain')])
+            ])
         else:
             NotImplemented
     else:
