@@ -119,8 +119,12 @@ def run():
         suffix='bold.nii.gz'
     )
     BOLD_WHOLEBRAIN_PATHS.sort()
-    assert len(BOLD_WHOLEBRAIN_PATHS) == 1, f"There are more than 1 wholebrain bold images."
-    bold_wholebrain = BOLD_WHOLEBRAIN_PATHS[0]
+    if not len(BOLD_WHOLEBRAIN_PATHS) == 1:
+        print(f"WARNING: There are more than 1 wholebrain bold images.\n{BOLD_WHOLEBRAIN_PATHS}")
+        bold_wholebrain = BOLD_WHOLEBRAIN_PATHS[-1]
+    else:
+        bold_wholebrain = BOLD_WHOLEBRAIN_PATHS[0]
+
     # get slab bold info
     NON_SLAB_TASKS = ['reversephase','wholebrain','None']
     BOLD_SLAB_PATHS = bids_util.get_bold_list(
@@ -484,7 +488,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         (fmap_buffer,anat_to_fmap_wf,[('fmap_ref','inputnode.fmap_ref')]),
         (anat_buffer,anat_to_fmap_wf,[('fs_t1w_brain','inputnode.anat')]),
     ])
-
+    
     """
     Set-up wholebrain bold workflows
     """
