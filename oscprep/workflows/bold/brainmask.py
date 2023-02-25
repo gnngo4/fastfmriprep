@@ -5,6 +5,8 @@ from nipype.pipeline import engine as pe
 
 def init_bold_wholebrain_brainmask_wf(
     omp_nthreads=8,
+    use_bbr=True,
+    bold2t1w_init = 'register',
     name='skullstrip_wholebrain_bold_wf'
 ):
     """
@@ -50,7 +52,7 @@ def init_bold_wholebrain_brainmask_wf(
     )
 
     # bbreg t1-to-wholebrain-bold
-    bbr_wf = init_bbreg_wf(use_bbr=True,bold2t1w_dof=9,bold2t1w_init='register',omp_nthreads=omp_nthreads)
+    bbr_wf = init_bbreg_wf(use_bbr=use_bbr,bold2t1w_dof=9,bold2t1w_init=bold2t1w_init,omp_nthreads=omp_nthreads)
 
     # transform t1w_brainmask to wholebrain-bold space
     t1brainmask_to_bold = pe.Node(

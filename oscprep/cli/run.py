@@ -769,7 +769,11 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         """
         register sdc-corrected slab bold to sdc-corrected wholebrain bold
         """
-        slab_bold_to_wholebrain_bold_wf = init_slab_bold_to_wholebrain_bold_wf(name=f'reg_{bold_slab_base}_to_wholebrain_bold_wf')
+        slab_bold_to_wholebrain_bold_wf = init_slab_bold_to_wholebrain_bold_wf(
+            bold2t1w_dof=6,
+            use_bbr=True,
+            name=f'reg_{bold_slab_base}_to_wholebrain_bold_wf'
+        )
         
         # connect
         wf.connect([

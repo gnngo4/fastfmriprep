@@ -313,7 +313,12 @@ def init_wholebrain_bold_to_anat_wf(omp_nthreads=8,name="reg_wholebrain_bold_to_
 
     return workflow
 
-def init_slab_bold_to_wholebrain_bold_wf(omp_nthreads=8, name="reg_slab_bold_to_wholebrain_bold_wf"):
+def init_slab_bold_to_wholebrain_bold_wf(
+    bold2t1w_dof=6,
+    use_bbr=True,
+    omp_nthreads=8,
+    name="reg_slab_bold_to_wholebrain_bold_wf"
+    ):
 
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
 
@@ -347,8 +352,8 @@ def init_slab_bold_to_wholebrain_bold_wf(omp_nthreads=8, name="reg_slab_bold_to_
     )
 
     slab_bold_to_wholebrain_bold = init_fsl_bbr_wf(
-        use_bbr=True,
-        bold2t1w_dof=6,
+        bold2t1w_dof=bold2t1w_dof,
+        use_bbr=use_bbr,
         bold2t1w_init='register',
         omp_nthreads=omp_nthreads,
         name='reg_slab_bold_to_wholebrain_bold'
