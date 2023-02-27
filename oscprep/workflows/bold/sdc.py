@@ -6,6 +6,8 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
 def init_bold_sdc_wf(
+    use_fsl_gre_fmap=False,
+    fmap_metadata=None,
     name="bold_sdc_wf",
 ):
     
@@ -30,7 +32,10 @@ def init_bold_sdc_wf(
         name="outputnode"
     )
 
-    apply_fmap_to_bold_wf = init_apply_fmap_to_bold_wf()
+    apply_fmap_to_bold_wf = init_apply_fmap_to_bold_wf(
+        use_fsl_gre_fmap=use_fsl_gre_fmap,
+        fmap_metadata=fmap_metadata
+    )
 
     get_vsm = pe.Node(
         fsl.FUGUE(

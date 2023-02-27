@@ -121,9 +121,11 @@ RUN apt-get update -qq \
         -name "fslinfo" -or \
         -name "fslmaths" -or \
         -name "fslmerge" -or \
+    	-name "fsl_prepare_fieldmap" -or \
         -name "fslroi" -or \
         -name "fslsplit" -or \
         -name "fslstats" -or \
+	-name "fslval" -or \
         -name "fugue" -or \
         -name "imtest" -or \
         -name "mcflirt" -or \

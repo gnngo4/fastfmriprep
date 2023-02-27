@@ -441,18 +441,20 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         name='fmap_buffer'
     )
 
+    # get fmap given a subject and session id
+    # asserts fmap is of PHASEDIFF EstimatorType
+    # and only one fmap exists
+    fmap_estimators = find_estimators(
+        layout=layout,
+        subject=SUBJECT_ID,
+        sessions=SESSION_ID
+    )
+    assert len(fmap_estimators) == 1, f"There are {len(fmap_estimators)} fieldmap estimators. Expected is 1."
+    assert fmap_estimators[0].method == fm.EstimatorType.PHASEDIFF, f"EstimatorType is {fmap_estimators[0].method}. Expect is {fm.EstimatorType.PHASEDIFF}"
+    _fmap_estimator = fmap_estimators[0]
+    phasediff = [str(i.path) for i in _fmap_estimator.sources if 'phasediff' in str(i.path)][0]
     if not DERIV_WORKFLOW_FLAGS['fmap_preproc']:
         
-        # get fmap given a subject and session id
-        # asserts fmap is of PHASEDIFF EstimatorType
-        # and only one fmap exists
-        fmap_estimators = find_estimators(
-            layout=layout,
-            subject=SUBJECT_ID,
-            sessions=SESSION_ID
-        )
-        assert len(fmap_estimators) == 1, f"There are {len(fmap_estimators)} fieldmap estimators. Expected is 1."
-        assert fmap_estimators[0].method == fm.EstimatorType.PHASEDIFF, f"EstimatorType is {fmap_estimators[0].method}. Expect is {fm.EstimatorType.PHASEDIFF}"
         # Process fieldmap
         fmap_wf = init_fmap_preproc_wf(
             estimators=fmap_estimators,
@@ -462,12 +464,11 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             name='fmap_preproc_wf'
         )
         # connect
-        wf.connect([
-            (fmap_wf,fmap_buffer,[
-                (('outputnode.fmap_ref',_get_element,0),'fmap_ref'),
-                (('outputnode.fmap',_get_element,0),'fmap'),
-            ])
-        ])
+        wf.connect([(fmap_wf,fmap_buffer,[(('outputnode.fmap_ref',_get_element,0),'fmap_ref')])])
+        if args.fmap_gre_fsl:
+            fmap_buffer.inputs.fmap = phasediff
+        else:
+            wf.connect([(fmap_wf,fmap_buffer,[(('outputnode.fmap',_get_element,0),'fmap')])])
 
     else:
         
@@ -477,6 +478,9 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             'fmap_ref': f"{fmap_preproc_base}_desc-magnitude_fieldmap.nii.gz",
             'fmap': f"{fmap_preproc_base}_desc-preproc_fieldmap.nii.gz",
         }
+        # Overwrite fmap value pair with original phasediff image
+        if args.fmap_gre_fsl:
+            fmap_inputs['fmap'] = phasediff
         # set fmap_buffer inputs
         for _key, _path in fmap_inputs.items():
             assert os.path.exists(_path), f"{_path} does not exist."
@@ -545,7 +549,11 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         # register fmap to wholebrain bold
         fmap_to_wholebrain_bold_wf = init_fmap_to_wholebrain_bold_wf(name='reg_fmap_to_wholebrain_bold_wf')
         # apply sdc to wholebrain bold
-        wholebrain_bold_unwarp_wf = init_bold_sdc_wf(name='wholebrain_bold_unwarp_wf')
+        wholebrain_bold_unwarp_wf = init_bold_sdc_wf(
+            use_fsl_gre_fmap=args.fmap_gre_fsl,
+            fmap_metadata=layout.get_metadata(phasediff),
+            name='wholebrain_bold_unwarp_wf'
+        )
         wholebrain_bold_unwarp_wf.inputs.inputnode.bold_metadata = layout.get_metadata(bold_wholebrain)
 
         """
@@ -763,7 +771,11 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         # register fmap to slab bold workflow
         fmap_to_slab_bold_wf = init_fmap_to_slab_bold_wf(name=f'reg_fmap_to_{bold_slab_base}_wf')
         # apply sdc to wholebrain bold
-        slab_bold_unwarp_wf = init_bold_sdc_wf(name=f'{bold_slab_base}_unwarp_wf')
+        slab_bold_unwarp_wf = init_bold_sdc_wf(
+            use_fsl_gre_fmap=args.fmap_gre_fsl,
+            fmap_metadata=layout.get_metadata(phasediff),
+            name=f'{bold_slab_base}_unwarp_wf'
+        )
         slab_bold_unwarp_wf.inputs.inputnode.bold_metadata = metadata
         
         """

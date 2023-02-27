@@ -1,7 +1,11 @@
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
-def init_apply_fmap_to_bold_wf(name="apply_fmap_to_bold_wf"):
+def init_apply_fmap_to_bold_wf(
+    use_fsl_gre_fmap=False,
+    fmap_metadata=None,
+    name="apply_fmap_to_bold_wf"
+):
     
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
 
@@ -12,7 +16,7 @@ def init_apply_fmap_to_bold_wf(name="apply_fmap_to_bold_wf"):
 
     inputnode = pe.Node(
         niu.IdentityInterface(
-            fields=["fmap","fmap_ref","target_ref","target_mask","fmap2epi_xfm"]
+            fields=["fmap","fmap_ref","fmap_metadata","target_ref","target_mask","fmap2epi_xfm"]
         ),
         name="inputnode"
     )
@@ -32,26 +36,16 @@ def init_apply_fmap_to_bold_wf(name="apply_fmap_to_bold_wf"):
         mem_gb=0.3
     )
     
+    # if `use_fsl_gre_fmap` is True, then fmap 
+    # is a phasediff image instead
     fmap2epi = pe.Node(
         ApplyTransforms(invert_transform_flags=[False]),
         name='fmap2epi',
         n_procs=4,
         mem_gb=0.3
     )
-
-    mask_fmap = pe.Node(
-        fsl.ApplyMask(),
-        name='mask_fmap'
-    )
-
-    convert_to_rad = pe.Node(
-        fsl.BinaryMaths(
-            operation='mul',
-            operand_value=6.28
-        ),
-        name='convert_to_rad'
-    )
-
+    
+    # Connect
     workflow.connect([
         (inputnode,fmapmag2epi,[
             ('fmap_ref','input_image'),
@@ -64,14 +58,60 @@ def init_apply_fmap_to_bold_wf(name="apply_fmap_to_bold_wf"):
             ('target_ref','reference_image'),
             ('fmap2epi_xfm','transforms')
         ]),
-        (fmap2epi,mask_fmap,[('output_image','in_file')]),
-        (inputnode,mask_fmap,[('target_mask','mask_file')]),
-        (mask_fmap,convert_to_rad,[('out_file','in_file')]),
-        (convert_to_rad,outputnode,[('out_file','fmap_bold')])
     ])
+    
+    if use_fsl_gre_fmap:
+
+        from oscprep.interfaces.fsl_prepare_fieldmap import FSLPrepareFieldmap
+
+        assert fmap_metadata is not None, f"`fmap_metadata` must be specified."
+        inputnode.inputs.fmap_metadata = fmap_metadata
+        # Mask fmap magnitude image
+        mask_fmap_mag = pe.Node(
+            fsl.ApplyMask(),
+            name='mask_fmap_mag'
+        )
+        # Generate fmap (rad/s) using fsl_prepare_fieldmap
+        prepare_fmap = pe.Node(
+            FSLPrepareFieldmap(out_image = 'fmap_rads.nii.gz'),
+            name='prepare_fmap',
+        )
+
+        # Connect
+        workflow.connect([
+            (fmapmag2epi,mask_fmap_mag,[('output_image','in_file')]),
+            (inputnode,mask_fmap_mag,[('target_mask','mask_file')]),
+            (mask_fmap_mag,prepare_fmap,[('out_file','magnitude_image')]),
+            (fmap2epi,prepare_fmap,[('output_image','phase_image')]),
+            (inputnode,prepare_fmap,[(('fmap_metadata',_get_delta_te),'deltaTE')]),
+            (prepare_fmap,outputnode,[('out_image','fmap_bold')])
+        ])
+
+    else:
+
+        # Mask fmap
+        mask_fmap = pe.Node(
+            fsl.ApplyMask(),
+            name='mask_fmap'
+        )
+        # Convert fmap units from Hz to rads
+        convert_to_rad = pe.Node(
+            fsl.BinaryMaths(
+                operation='mul',
+                operand_value=6.28
+            ),
+            name='convert_to_rad'
+        )
+
+        # Connect
+        workflow.connect([
+            (fmap2epi,mask_fmap,[('output_image','in_file')]),
+            (inputnode,mask_fmap,[('target_mask','mask_file')]),
+            (mask_fmap,convert_to_rad,[('out_file','in_file')]),
+            (convert_to_rad,outputnode,[('out_file','fmap_bold')])
+        ])
 
     return workflow
-
 
 def init_apply_bold_to_anat_wf(
     slab_bold_quick=False,
@@ -141,3 +181,12 @@ def _get_metadata(metadata_dict,_key):
     assert _key in metadata_dict, f"{_key} not found in metadata."
 
     return metadata_dict[_key]
+
+def _get_delta_te(metadata_dict):
+
+    for _key in ['EchoTime1', 'EchoTime2']:
+        assert _key in metadata_dict, f"{_key} not found in metadata."
+
+    delta_te = ( float(metadata_dict['EchoTime2']) - float(metadata_dict['EchoTime1']) ) * 1000
+
+    return delta_te
