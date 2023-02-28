@@ -27,7 +27,7 @@ def init_bold_wholebrain_brainmask_wf(
     
     from fmriprep.workflows.bold.registration import init_bbreg_wf
     from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
-    from nipype.interfaces.fsl import ApplyMask
+    from nipype.interfaces.fsl import ApplyMask, DilateImage
     
     workflow = Workflow(name=name)
     
@@ -62,6 +62,16 @@ def init_bold_wholebrain_brainmask_wf(
         ),
         name='wholebrain_bold_brainmask'
     )
+
+    # dilate mask
+    dilate_mask = pe.Node(
+        DilateImage(
+            kernel_shape='3D',
+            operation='modal',
+        ),
+        name='dilate_wholebrain_bold_mask'
+    )
+
     # transform t1w_dseg to wholebrain-bold space
     t1dseg_to_bold = pe.Node(
         ApplyTransforms(
@@ -99,14 +109,15 @@ def init_bold_wholebrain_brainmask_wf(
             ('t1w_dseg','input_image'),
             ('wholebrain_bold','reference_image')
         ]),
-        (t1brainmask_to_bold, apply_mask, [('output_image','mask_file')]),
+        (t1brainmask_to_bold, dilate_mask, [('output_image','in_file')]),
+        (dilate_mask, apply_mask, [('out_file','mask_file')]),
         (inputnode, apply_mask, [('wholebrain_bold','in_file')]),
         (bbr_wf, outputnode, [
             ('outputnode.itk_bold_to_t1','itk_bold_to_t1'),
             ('outputnode.itk_t1_to_bold','itk_t1_to_bold')
         ]),
         (apply_mask,outputnode,[('out_file','brain')]),
-        (t1brainmask_to_bold,outputnode,[('output_image','brainmask')]),
+        (dilate_mask,outputnode,[('out_file','brainmask')]),
         (t1dseg_to_bold,outputnode,[('output_image','dseg')])
     ])
 
@@ -159,7 +170,7 @@ def init_bold_slab_brainmask_wf(
     # fsl_bbr slab-bold-to-wholebrain-bold
     fsl_bbr_wf = init_fsl_bbr_wf(use_bbr=True,bold2t1w_dof=6,bold2t1w_init='register',omp_nthreads=omp_nthreads)
 
-    # transform t1w_brainmask to wholebrain-bold space
+    # transform wholebrain-bold brainmask to slab-bold space
     boldbrainmask_to_slab = pe.Node(
         ApplyTransforms(
             interpolation="MultiLabel",
