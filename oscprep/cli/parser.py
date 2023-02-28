@@ -126,4 +126,17 @@ def setup_parser():
         help='[fmap] Calculate fieldmap using `fsl_prepare_fieldmap`. default uses sdcflows-generated fieldmap.'
     )
 
+    parser.add_argument(
+        '--reg_slab_to_wholebrain_bbr',
+        action='store_true',
+        help='[registration] Enable BBR cost function for estimating slab to wholebrain epi registrations.'
+    )
+    
+    parser.add_argument(
+        '--reg_slab_to_wholebrain_dof',
+        default=6,
+        type=int,
+        help='[registration] Specify DOF for estimating slab to wholebrain epi registrations. default=6.'
+    )
+    
     return parser
