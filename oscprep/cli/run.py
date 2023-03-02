@@ -815,16 +815,34 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 ('outputnode.brain','inputnode.target_ref'),
                 ('outputnode.brain','inputnode.target_mask'),
             ]),
-            (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
-                ('undistorted_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
-            ]),
-            (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
-                ('undistorted_boldref','inputnode.undistorted_wholebrain_bold'),
-            ]),
-            (slab_bold_unwarp_wf,slab_bold_to_wholebrain_bold_wf,[
-                ('outputnode.undistorted_bold','inputnode.undistorted_slab_bold')
-            ])
         ])
+
+        # Use undistorted bold to estimate slab to wholebrain epi transformation
+        if args.reg_slab_to_wholebrain_undistorted:
+            workflow.connect([
+                (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
+                    ('undistorted_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
+                ]),
+                (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
+                    ('undistorted_boldref','inputnode.undistorted_wholebrain_bold'),
+                ]),
+                (slab_bold_unwarp_wf,slab_bold_to_wholebrain_bold_wf,[
+                    ('outputnode.undistorted_bold','inputnode.undistorted_slab_bold')
+                ])
+            ])
+        # Use distorted bold to estimate slab to wholebrain epi transformation
+        else:
+            workflow.connect([
+                (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
+                    ('distorted_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
+                ]),
+                (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
+                    ('distorted_boldref','inputnode.undistorted_wholebrain_bold'),
+                ]),
+                (slab_bold_brainmask_wf,slab_bold_to_wholebrain_bold_wf,[
+                    ('outputnode.brain','inputnode.undistorted_slab_bold')
+                ])
+            ])
         
         """
         Merge and apply transforms

@@ -127,6 +127,12 @@ def setup_parser():
     )
 
     parser.add_argument(
+        '--reg_slab_to_wholebrain_undistorted',
+        action='store_true',
+        help='[registration] Estimate slab to wholebrain epi transform with SDC-corrected images.'
+    )
+
+    parser.add_argument(
         '--reg_slab_to_wholebrain_bbr',
         action='store_true',
         help='[registration] Enable BBR cost function for estimating slab to wholebrain epi registrations.'
