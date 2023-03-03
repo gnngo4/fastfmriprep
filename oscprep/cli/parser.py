@@ -131,6 +131,19 @@ def setup_parser():
         action='store_true',
         help='[registration] Estimate wholebrain epi to anat transform with SDC-corrected images.'
     )
+    
+    parser.add_argument(
+        '--reg_wholebrain_to_anat_bbr',
+        action='store_true',
+        help='[registration] Enable BBR cost function for estimating wholebrain epi to anat registrations.'
+    )
+    
+    parser.add_argument(
+        '--reg_wholebrain_to_anat_dof',
+        default=9,
+        type=int,
+        help='[registration] Specify DOF for estimating wholebrain epi to anat registrations. default=9.'
+    )
 
     parser.add_argument(
         '--reg_slab_to_wholebrain_undistorted',

@@ -559,7 +559,11 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         """
         register sdc-corrected (or undistorted) wholebrain bold to anat
         """
-        wholebrain_bold_to_anat_wf = init_wholebrain_bold_to_anat_wf(name='reg_wholebrain_bold_to_anat_wf')
+        wholebrain_bold_to_anat_wf = init_wholebrain_bold_to_anat_wf(
+            bold2t1w_dof=args.reg_wholebrain_to_anat_dof,
+            use_bbr=args.reg_wholebrain_to_anat_bbr,
+            name='reg_wholebrain_bold_to_anat_wf'
+        )
 
         # connect
         wf.connect([
