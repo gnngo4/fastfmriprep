@@ -588,7 +588,6 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 ('outputnode.brain','inputnode.target_ref'),
                 ('outputnode.brain','inputnode.target_mask'),
             ]),
-            (wholebrain_bold_unwarp_wf,wholebrain_bold_to_anat_wf,[('outputnode.undistorted_bold','inputnode.undistorted_bold')]),
             (anat_buffer,wholebrain_bold_to_anat_wf,[
                 ('fsnative2t1w_xfm','inputnode.fsnative2t1w_xfm'),
                 ('subjects_dir','inputnode.subjects_dir'),
@@ -597,6 +596,20 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 ('fs_t1w_brain','inputnode.t1w_brain'),
             ]),
         ])
+        
+        """
+        # TODO ADD DOF option to wholebrain_bold to anat wf
+        """        
+        # Use undistorted bold to estimate wholebrain epi to anat transformation
+        if args.reg_wholebrain_to_anat_undistorted:
+            wf.connect([
+                (wholebrain_bold_unwarp_wf,wholebrain_bold_to_anat_wf,[('outputnode.undistorted_bold','inputnode.undistorted_bold')]),
+            ])
+        # Use distorted bold to estimate wholebrain epi to anat transformation
+        else:
+            wf.connect([
+                (wholebrain_bold_brainmask_wf,wholebrain_bold_to_anat_wf,[('outputnode.brain','inputnode.undistorted_bold')]),
+            ])
 
         """
         save wholebrain bold reference data to derivative directories
@@ -629,19 +642,15 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             (wholebrain_bold_to_anat_wf,wholebrain_bold_preproc_derivatives_wf,[
                 ('outputnode.undistorted_bold_to_t1','inputnode.bold_ref'),
                 ('outputnode.fsl_wholebrain_bold_to_t1','inputnode.wholebrain_bold_to_t1_mat'),
-            ]),
-            (wholebrain_bold_to_anat_wf,wholebrain_bold_preproc_derivatives_wf,[
-                ('outputnode.out_report','inputnode.wholebrain_bold_to_t1_svg')
+                ('outputnode.out_report','inputnode.wholebrain_bold_to_t1_svg'),
+                ('outputnode.undistorted_bold_dseg','inputnode.undistorted_dseg'),
+                ('outputnode.fsl_wholebrain_bold_to_t1','inputnode.undistorted_fsl_bold_to_t1'),
             ]),
             (wholebrain_bold_brainmask_wf,wholebrain_bold_preproc_derivatives_wf,[
                 ('outputnode.dseg','inputnode.distorted_dseg'),
                 ('outputnode.brain','inputnode.distorted_boldref'),
                 ('outputnode.brainmask','inputnode.distorted_brainmask'),
                 ('outputnode.itk_t1_to_bold','inputnode.distorted_itk_t1_to_bold'),
-            ]),
-            (wholebrain_bold_to_anat_wf,wholebrain_bold_preproc_derivatives_wf,[
-                ('outputnode.undistorted_bold_dseg','inputnode.undistorted_dseg'),
-                ('outputnode.fsl_wholebrain_bold_to_t1','inputnode.undistorted_fsl_bold_to_t1'),
             ]),
             (wholebrain_bold_unwarp_wf,wholebrain_bold_preproc_derivatives_wf,[
                 ('outputnode.undistorted_bold','inputnode.undistorted_boldref'),
@@ -819,7 +828,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
 
         # Use undistorted bold to estimate slab to wholebrain epi transformation
         if args.reg_slab_to_wholebrain_undistorted:
-            workflow.connect([
+            wf.connect([
                 (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
                     ('undistorted_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
                 ]),
@@ -832,7 +841,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             ])
         # Use distorted bold to estimate slab to wholebrain epi transformation
         else:
-            workflow.connect([
+            wf.connect([
                 (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
                     ('distorted_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
                 ]),

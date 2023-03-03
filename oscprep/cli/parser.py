@@ -127,6 +127,12 @@ def setup_parser():
     )
 
     parser.add_argument(
+        '--reg_wholebrain_to_anat_undistorted',
+        action='store_true',
+        help='[registration] Estimate wholebrain epi to anat transform with SDC-corrected images.'
+    )
+
+    parser.add_argument(
         '--reg_slab_to_wholebrain_undistorted',
         action='store_true',
         help='[registration] Estimate slab to wholebrain epi transform with SDC-corrected images.'
