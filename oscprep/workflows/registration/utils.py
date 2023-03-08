@@ -54,6 +54,7 @@ def init_itk_to_fsl_affine_wf(
     return workflow
 
 def init_fsl_merge_transforms_wf(
+    use_fmaps,
     name='fsl_merge_transforms_wf'
 ):
     """
@@ -134,10 +135,14 @@ def init_fsl_merge_transforms_wf(
             ('reference','fixed_image')
         ]),
         (gen_ref,slab2wholebrain_warp,[('out_file','reference')]),
-        (inputnode,slab2wholebrain_warp,[('slab_sdc_warp','warp1')]),
         (slab2wholebrain_aff,slab2wholebrain_warp,[('out_file','postmat')]),
         (gen_ref,outputnode,[('out_file','reference_resampled')]),
         (slab2wholebrain_warp,outputnode,[('out_file','slab2anat_warp')])
     ])
+
+    if use_fmaps:
+        workflow.connect([
+            (inputnode,slab2wholebrain_warp,[('slab_sdc_warp','warp1')]),
+        ])
 
     return workflow

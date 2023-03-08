@@ -121,6 +121,12 @@ def setup_parser():
     )
 
     parser.add_argument(
+        '--fmapless',
+        action='store_true',
+        help='[fmap] Runs preprocessing without performing any susceptibility distortion correction.'
+    )
+
+    parser.add_argument(
         '--fmap_gre_fsl',
         action='store_true',
         help='[fmap] Calculate fieldmap using `fsl_prepare_fieldmap`. default uses sdcflows-generated fieldmap.'
