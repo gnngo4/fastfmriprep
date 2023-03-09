@@ -650,6 +650,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             source_preproc_wholebrain_bold['undistorted_dseg'],
             source_preproc_wholebrain_bold['undistorted_spacet1_boldref'],
             source_preproc_wholebrain_bold['undistorted_boldref'],
+            use_fmaps=use_fmaps,
             workflow_name_base='wholebrain_bold',
             out_path_base=BOLD_PREPROC_DIR.split('/')[-1],
         )
@@ -999,6 +1000,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             source_preproc_slab_bold['slab_bold_to_wholebrain_bold_svg'],
             source_preproc_slab_bold['slab_bold_to_t1_warp'],
             bold_slab_base,
+            use_fmaps=use_fmaps,
             out_path_base=BOLD_PREPROC_DIR.split('/')[-1],
         )
 

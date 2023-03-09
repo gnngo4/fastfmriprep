@@ -102,7 +102,7 @@ def get_slab_bold_preproc_source_files(bold_path):
     bold_tcompcor = f"{sub_id}/{ses_id}/roi/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-confound_tCompCor.nii.gz')}"
     bold_crownmask = f"{sub_id}/{ses_id}/roi/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-confound_crownmask.nii.gz')}"
     # transforms
-    slab_bold_hmc_mats = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','_hmc.mats')}"
+    slab_bold_hmc_mats = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','hmc.mats')}"
     slab_bold_sdc_warp = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','sdc_warp.nii.gz')}"
     slab_bold_to_wholebrain_bold_mat = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-slab_to-wholebrain_xfm.mat')}"
     slab_bold_to_wholebrain_bold_svg = f"{sub_id}/{ses_id}/figures/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-slab_to-wholebrain.svg')}"
