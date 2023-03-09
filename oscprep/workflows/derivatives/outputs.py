@@ -612,6 +612,6 @@ def save_slab_bold_hmc(hmc_list,save_base):
     
     for ix, vol_affine in enumerate(hmc_list):
         _vol_affine = vol_affine.split('/')[-1]
-        ds_vol_affine = ExportFile(out_file=f"{save_base}/{_vol_affine}.mat")
+        ds_vol_affine = ExportFile(out_file=f"{save_base}/{_vol_affine}")
         ds_vol_affine.inputs.in_file = vol_affine
         ds_vol_affine.run()
