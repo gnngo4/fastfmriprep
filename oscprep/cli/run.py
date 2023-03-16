@@ -1,6 +1,7 @@
 def run():
 
     import argparse, os, sys
+    from datetime import datetime
 
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
     from niworkflows.utils.spaces import SpatialReferences,Reference
@@ -26,12 +27,14 @@ def run():
         get_anat_brainmask_source_files,
         get_bold_brainmask_source_files,
         get_wholebrain_bold_preproc_source_files,
+        get_slab_reference_bold_preproc_source_files,
         get_slab_bold_preproc_source_files,
     )
     from oscprep.workflows.derivatives.outputs import (
         init_anat_brainmask_derivatives_wf,
         init_bold_brainmask_derivatives_wf,
         init_wholebrain_bold_preproc_derivatives_wf,
+        init_slab_reference_bold_preproc_derivatives_wf,
         init_slab_bold_preproc_derivatives_wf,
     )
     # anatomical workflows
@@ -44,6 +47,7 @@ def run():
     from oscprep.workflows.bold.boldref import init_bold_ref_wf
     from oscprep.workflows.bold.brainmask import (
         init_bold_wholebrain_brainmask_wf,
+        init_bold_slabref_brainmask_wf,
         init_bold_slab_brainmask_wf,
         init_undistort_bold_slab_brainmask_to_t1_wf
     )
@@ -55,7 +59,8 @@ def run():
         init_fmap_to_wholebrain_bold_wf,
         init_fmap_to_slab_bold_wf,
         init_wholebrain_bold_to_anat_wf,
-        init_slab_bold_to_wholebrain_bold_wf
+        init_slab_bold_to_wholebrain_bold_wf,
+        init_slab_to_slabref_bold_wf,
     )
     from oscprep.workflows.registration.apply import (
         init_apply_fmap_to_bold_wf,
@@ -136,7 +141,13 @@ def run():
         full_path_flag=True,
         suffix='bold.nii.gz'
     )
-    BOLD_SLAB_PATHS.sort()
+    # sort by acquisition time
+    scan_times = []
+    for bold_slab in BOLD_SLAB_PATHS:
+        scan_times.append(
+            datetime.strptime(layout.get_metadata(bold_slab)['AcquisitionTime'],"%H:%M:%S.%f")
+        )
+    scan_times, BOLD_SLAB_PATHS = (list(i) for i in zip(*sorted(zip(scan_times,BOLD_SLAB_PATHS))))
 
     # `bold_slab` selection filters
     BOLD_SLAB_PATHS_RUN, BOLD_SLAB_PATHS_SELECT_TASK, BOLD_SLAB_PATHS_SELECT_RUN = [], [], []
@@ -172,6 +183,7 @@ def run():
     DERIV_WORKFLOW_FLAGS['anat_preproc'] = os.path.isdir(f"{SMRIPREP_DIR}/sub-{SUBJECT_ID}")
     DERIV_WORKFLOW_FLAGS['fmap_preproc'] = os.path.isdir(f"{SDCFLOWS_DIR}/sub-{SUBJECT_ID}/ses-{SESSION_ID}")
     DERIV_WORKFLOW_FLAGS['wholebrain_bold_preproc'] = os.path.isdir(f"{BOLD_PREPROC_DIR}/sub-{SUBJECT_ID}/ses-{SESSION_ID}/wholebrain_bold")
+    DERIV_WORKFLOW_FLAGS['slab_bold_reference_preproc'] = os.path.isdir(f"{BOLD_PREPROC_DIR}/sub-{SUBJECT_ID}/ses-{SESSION_ID}/wholebrain_bold")
     # Print
     print(f"""\n[CONFIG]
 SUBJECT_ID: {SUBJECT_ID}
@@ -354,6 +366,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             hires=True,
             longitudinal=False,
             t1w=[t1w_input],
+            t2w=[],
             omp_nthreads=OMP_NTHREADS,
             output_dir=DERIV_DIR,
             skull_strip_template=Reference('OASIS30ANTs'),
@@ -501,7 +514,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     Set-up wholebrain bold workflows
     """
     # get output names for all wholebrain bold related files
-    source_preproc_wholebrain_bold = get_wholebrain_bold_preproc_source_files(bold_wholebrain)
+    source_preproc_wholebrain_bold = get_wholebrain_bold_preproc_source_files(bold_wholebrain,use_fmaps=use_fmaps)
     # wholebrain_bold_buffer
     wholebrain_bold_buffer = pe.Node(
         niu.IdentityInterface(
@@ -510,9 +523,9 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 'distorted_boldref',
                 'distorted_brainmask',
                 'distorted_itk_t1_to_bold',
-                'undistorted_dseg',
-                'undistorted_fsl_bold_to_t1',
-                'undistorted_boldref',
+                'proc_dseg',
+                'proc_fsl_bold_to_t1',
+                'proc_boldref',
             ]
         ),
         name='wholebrain_bold_buffer'
@@ -535,7 +548,11 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             name='wholebrain_bold_reference_wf'
         )
         # get wholebrain bold brainmask
-        wholebrain_bold_brainmask_wf = init_bold_wholebrain_brainmask_wf(name='wholebrain_bold_brainmask_wf')
+        wholebrain_bold_brainmask_wf = init_bold_wholebrain_brainmask_wf(
+            bold2t1w_dof=args.reg_wholebrain_to_anat_dof,
+            use_bbr=args.reg_wholebrain_to_anat_bbr,
+            name='wholebrain_bold_brainmask_wf'
+        )
         # save wholebrain bold brainmask in derivative directories
         source_brain, source_brainmask, _, _, _ = get_bold_brainmask_source_files(bold_wholebrain)
         wholebrain_bold_brainmask_derivatives_wf = init_bold_brainmask_derivatives_wf(
@@ -614,7 +631,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         ])
         if use_fmaps:
             # Use undistorted bold to estimate wholebrain epi to anat transformation
-            if args.reg_wholebrain_to_anat_undistorted and use_fmaps:
+            if args.reg_wholebrain_to_anat_undistorted:
                 wf.connect([
                     (wholebrain_bold_unwarp_wf,wholebrain_bold_to_anat_wf,[('outputnode.undistorted_bold','inputnode.undistorted_bold')]),
                 ])
@@ -643,26 +660,29 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             source_preproc_wholebrain_bold['distorted_dseg'],
             source_preproc_wholebrain_bold['distorted_itk_bold_to_t1'],
             source_preproc_wholebrain_bold['distorted_itk_t1_to_bold'],
-            source_preproc_wholebrain_bold['undistorted_itk_bold_to_t1'],
-            source_preproc_wholebrain_bold['undistorted_itk_t1_to_bold'],
-            source_preproc_wholebrain_bold['undistorted_fsl_bold_to_t1'],
-            source_preproc_wholebrain_bold['undistorted_fsl_t1_to_bold'],
-            source_preproc_wholebrain_bold['undistorted_dseg'],
-            source_preproc_wholebrain_bold['undistorted_spacet1_boldref'],
-            source_preproc_wholebrain_bold['undistorted_boldref'],
+            source_preproc_wholebrain_bold['proc_itk_bold_to_t1'],
+            source_preproc_wholebrain_bold['proc_itk_t1_to_bold'],
+            source_preproc_wholebrain_bold['proc_fsl_bold_to_t1'],
+            source_preproc_wholebrain_bold['proc_fsl_t1_to_bold'],
+            source_preproc_wholebrain_bold['proc_dseg'],
+            source_preproc_wholebrain_bold['proc_spacet1_boldref'],
+            source_preproc_wholebrain_bold['proc_boldref'],
             use_fmaps=use_fmaps,
             workflow_name_base='wholebrain_bold',
             out_path_base=BOLD_PREPROC_DIR.split('/')[-1],
         )
 
         # connect
+        ## NOTE: if (use_fmaps == True) and (args.reg_wholebrain_to_anat_undistorted == False)
+        ## the saved inputnode.boldref (in wholebrain_bold_preproc_derivatives_wf) does not include an sdc-unwarping
+        ## this is only relevant for visualization, and does not effect preprocessed slab data.
         wf.connect([
             (wholebrain_bold_to_anat_wf,wholebrain_bold_preproc_derivatives_wf,[
                 ('outputnode.undistorted_bold_to_t1','inputnode.bold_ref'),
                 ('outputnode.fsl_wholebrain_bold_to_t1','inputnode.wholebrain_bold_to_t1_mat'),
                 ('outputnode.out_report','inputnode.wholebrain_bold_to_t1_svg'),
-                ('outputnode.undistorted_bold_dseg','inputnode.undistorted_dseg'),
-                ('outputnode.fsl_wholebrain_bold_to_t1','inputnode.undistorted_fsl_bold_to_t1'),
+                ('outputnode.undistorted_bold_dseg','inputnode.proc_dseg'),
+                ('outputnode.fsl_wholebrain_bold_to_t1','inputnode.proc_fsl_bold_to_t1'),
             ]),
             (wholebrain_bold_brainmask_wf,wholebrain_bold_preproc_derivatives_wf,[
                 ('outputnode.dseg','inputnode.distorted_dseg'),
@@ -688,18 +708,18 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             # (it depends on the input): 
             # TODO: change workflow function arguments to improve readability
             (wholebrain_bold_to_anat_wf,wholebrain_bold_buffer,[
-                ('outputnode.undistorted_bold_dseg','undistorted_dseg'),
-                ('outputnode.fsl_wholebrain_bold_to_t1','undistorted_fsl_bold_to_t1'),
+                ('outputnode.undistorted_bold_dseg','proc_dseg'),
+                ('outputnode.fsl_wholebrain_bold_to_t1','proc_fsl_bold_to_t1'),
             ]),
         ])
 
         if use_fmaps:
             wf.connect([
                 (wholebrain_bold_unwarp_wf,wholebrain_bold_preproc_derivatives_wf,[
-                    ('outputnode.undistorted_bold','inputnode.undistorted_boldref'),
+                    ('outputnode.undistorted_bold','inputnode.proc_boldref'),
                 ]),
                 (wholebrain_bold_unwarp_wf,wholebrain_bold_buffer,[
-                    ('outputnode.undistorted_bold','undistorted_boldref'),
+                    ('outputnode.undistorted_bold','proc_boldref'),
                 ]),
             ])
     
@@ -711,16 +731,253 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             'distorted_boldref': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['distorted_boldref']}",
             'distorted_brainmask': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['distorted_brainmask']}",
             'distorted_itk_t1_to_bold': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['distorted_itk_t1_to_bold']}",
-            'undistorted_dseg': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['undistorted_dseg']}",
-            'undistorted_fsl_bold_to_t1': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['undistorted_fsl_bold_to_t1']}",
-            'undistorted_boldref': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['undistorted_boldref']}",
+            'proc_dseg': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['proc_dseg']}",
+            'proc_fsl_bold_to_t1': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['proc_fsl_bold_to_t1']}",
+            'proc_boldref': f"{BOLD_PREPROC_DIR}/{source_preproc_wholebrain_bold['proc_boldref']}",
         }
         # set wholebrain_bold_buffer inputs
         for _key, _path in wholebrain_bold_inputs.items():
-            if not use_fmaps and 'undistorted_boldref' == _key:
+            if not use_fmaps and 'proc_boldref' == _key:
                 continue
             assert os.path.exists(_path), f"{_path} does not exist."
             setattr(wholebrain_bold_buffer.inputs, _key, _path)
+
+    """
+    Set-up slab bold reference workflows
+    """
+    # get output names for all wholebrain bold related files
+    slabref_bold = BOLD_SLAB_PATHS[0]
+    source_preproc_slabref_bold = get_slab_reference_bold_preproc_source_files(slabref_bold,use_fmaps=use_fmaps)
+    # slabref_bold_buffer
+    slabref_bold_buffer = pe.Node(
+        niu.IdentityInterface(
+            [
+                'distorted_boldref',
+                'distorted_brainmask',
+                'proc_fsl_slabref_to_wholebrain_bold',
+                'proc_itk_wholebrain_to_slabref_bold',
+                'proc_boldref',
+            ]
+        ),
+        name='slabref_bold_buffer'
+    )
+
+    if not DERIV_WORKFLOW_FLAGS['slab_bold_reference_preproc']:
+        """
+        Register the earliest slab bold to wholebrain bold
+        """
+        # select boldref from earliest slab bold
+        slabref_metadata = layout.get_metadata(slabref_bold)
+        slabref_inputnode = pe.Node(
+            niu.IdentityInterface(['slab_bold']),
+            name=f'slab_reference_inputnode'
+        )
+        slabref_inputnode.inputs.slab_bold = slabref_bold
+        # get slab bold reference image
+        slabref_bold_ref_wf = init_bold_ref_wf(
+            slabref_bold,
+            name=f'slab_reference_reference_wf'
+        )
+        # connect
+        wf.connect([
+            (slabref_inputnode,slabref_bold_ref_wf,[('slab_bold','inputnode.bold')])
+        ])
+
+        """
+        brainmask sdc-uncorrected (or distorted) slab bold workflows
+        """
+        # get slab bold brainmask
+        slabref_bold_brainmask_wf = init_bold_slabref_brainmask_wf(
+            bold2t1w_dof=args.reg_slab_to_wholebrain_dof,
+            use_bbr=args.reg_slab_to_wholebrain_bbr,
+            name='slab_reference_brainmask_wf'
+        )
+        # save slab bold brainmask in derivative directories
+        source_brain, source_brainmask, _, _, _ = get_bold_brainmask_source_files(slabref_bold,slabref=True)
+        slabref_bold_brainmask_derivatives_wf = init_bold_brainmask_derivatives_wf(
+            DERIV_DIR,
+            source_brain,
+            source_brainmask,
+            'slab_bold_reference',
+            out_path_base=BRAINMASK_DIR.split('/')[-1],
+            name=f'slab_reference_brainmask_derivatives_wf'
+        )
+        # connect
+        wf.connect([
+            (slabref_bold_ref_wf,slabref_bold_brainmask_wf,[('outputnode.boldref','inputnode.slab_bold')]),
+            (wholebrain_bold_buffer,slabref_bold_brainmask_wf,[
+                # Use wholebrain bold brainmask to perform slab bold brainmasking
+                ('distorted_dseg','inputnode.wholebrain_bold_dseg'),
+                ('distorted_boldref','inputnode.wholebrain_bold'),
+                ('distorted_brainmask','inputnode.wholebrain_bold_brainmask'),
+            ]),
+            (slabref_bold_brainmask_wf,slabref_bold_brainmask_derivatives_wf,[
+                ('outputnode.brain','inputnode.bold_brain'),
+                ('outputnode.brainmask','inputnode.bold_brainmask'),
+            ]),
+        ])
+
+        if use_fmaps:
+            """
+            apply fmap to slab bold workflows
+            """
+            # register fmap to slab bold workflow
+            fmap_to_slabref_bold_wf = init_fmap_to_slab_bold_wf(name='reg_fmap_to_slab_reference_wf')
+            # apply sdc to wholebrain bold
+            slabref_bold_unwarp_wf = init_bold_sdc_wf(
+                use_fsl_gre_fmap=args.fmap_gre_fsl,
+                fmap_metadata=layout.get_metadata(phasediff),
+                name='slab_reference_unwarp_wf'
+            )
+            slabref_bold_unwarp_wf.inputs.inputnode.bold_metadata = slabref_metadata
+
+            wf.connect([
+                (anat_to_fmap_wf,fmap_to_slabref_bold_wf,[('outputnode.itk_fmap2anat','inputnode.itk_fmap2anat')]),
+                # use distorted wholebrain bold to slab bold affine to bring fmap to slab bold space
+                (wholebrain_bold_buffer,fmap_to_slabref_bold_wf,[
+                    ('distorted_itk_t1_to_bold','inputnode.itk_anat2wholebrainbold')]),
+                (slabref_bold_brainmask_wf,fmap_to_slabref_bold_wf,[
+                    ('outputnode.itk_t1_to_bold','inputnode.itk_wholebrainbold2slabbold')]),
+                (fmap_to_slabref_bold_wf,slabref_bold_unwarp_wf,[('outputnode.itk_fmap2epi','inputnode.fmap2epi_xfm')]),
+                (fmap_buffer,slabref_bold_unwarp_wf,[
+                    ('fmap_ref','inputnode.fmap_ref'),
+                    ('fmap','inputnode.fmap'),
+                ]),
+                (slabref_bold_brainmask_wf,slabref_bold_unwarp_wf,[
+                    ('outputnode.brain','inputnode.target_ref'),
+                    ('outputnode.brain','inputnode.target_mask'),
+                ]),
+            ])
+
+        """
+        register sdc-corrected slab bold to sdc-corrected wholebrain bold
+        """
+        slabref_bold_to_wholebrain_bold_wf = init_slab_bold_to_wholebrain_bold_wf(
+            bold2t1w_dof=args.reg_slab_to_wholebrain_dof,
+            use_bbr=args.reg_slab_to_wholebrain_bbr,
+            name=f'reg_slab_reference_to_wholebrain_bold_wf'
+        )
+        if use_fmaps:
+            # Use undistorted bold to estimate slab to wholebrain epi transformation
+            if args.reg_slab_to_wholebrain_undistorted:
+                wf.connect([
+                    (wholebrain_bold_buffer,slabref_bold_to_wholebrain_bold_wf,[
+                        ('proc_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
+                    ]),
+                    (wholebrain_bold_buffer,slabref_bold_to_wholebrain_bold_wf,[
+                        ('proc_boldref','inputnode.undistorted_wholebrain_bold'),
+                    ]),
+                    (slabref_bold_unwarp_wf,slabref_bold_to_wholebrain_bold_wf,[
+                        ('outputnode.undistorted_bold','inputnode.undistorted_slab_bold')
+                    ])
+                ])
+            # Use distorted bold to estimate slab to wholebrain epi transformation
+            else:
+                wf.connect([
+                    (wholebrain_bold_buffer,slabref_bold_to_wholebrain_bold_wf,[
+                        ('proc_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
+                    ]),
+                    (wholebrain_bold_buffer,slabref_bold_to_wholebrain_bold_wf,[
+                        ('distorted_boldref','inputnode.undistorted_wholebrain_bold'),
+                    ]),
+                    (slabref_bold_brainmask_wf,slabref_bold_to_wholebrain_bold_wf,[
+                        ('outputnode.brain','inputnode.undistorted_slab_bold')
+                    ])
+                ])
+        else:
+            wf.connect([
+                (wholebrain_bold_buffer,slabref_bold_to_wholebrain_bold_wf,[
+                    ('proc_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
+                ]),
+                (wholebrain_bold_buffer,slabref_bold_to_wholebrain_bold_wf,[
+                    ('distorted_boldref','inputnode.undistorted_wholebrain_bold'),
+                ]),
+                (slabref_bold_brainmask_wf,slabref_bold_to_wholebrain_bold_wf,[
+                    ('outputnode.brain','inputnode.undistorted_slab_bold')
+                ])
+            ])
+
+        """
+        save slabref bold data to derivative directories
+        """
+        slabref_bold_preproc_derivatives_wf = init_slab_reference_bold_preproc_derivatives_wf(
+            DERIV_DIR,
+            source_preproc_slabref_bold['sub_id'],
+            source_preproc_slabref_bold['ses_id'],
+            source_preproc_slabref_bold['slabref_to_wholebrain_bold_mat'],
+            source_preproc_slabref_bold['slabref_to_wholebrain_bold_svg'],
+            source_preproc_slabref_bold['distorted_boldref'],
+            source_preproc_slabref_bold['distorted_brainmask'],
+            source_preproc_slabref_bold['distorted_itk_slabref_to_wholebrain_bold'],
+            source_preproc_slabref_bold['distorted_itk_wholebrain_to_slabref_bold'],
+            source_preproc_slabref_bold['proc_itk_slabref_to_wholebrain_bold'],
+            source_preproc_slabref_bold['proc_itk_wholebrain_to_slabref_bold'],
+            source_preproc_slabref_bold['proc_fsl_slabref_to_wholebrain_bold'],
+            source_preproc_slabref_bold['proc_fsl_wholebrain_to_slabref_bold'],
+            source_preproc_slabref_bold['proc_boldref'],
+            use_fmaps=use_fmaps,
+            workflow_name_base='slabref_bold',
+            out_path_base=BOLD_PREPROC_DIR.split('/')[-1],
+        )
+
+        # connect
+        wf.connect([
+            (slabref_bold_to_wholebrain_bold_wf,slabref_bold_preproc_derivatives_wf,[
+                ('outputnode.itk_wholebrain_bold_to_slab_bold','inputnode.proc_itk_wholebrain_to_slabref_bold'),
+                ('outputnode.fsl_slab_bold_to_wholebrain_bold','inputnode.slabref_to_wholebrain_bold_mat'),
+                ('outputnode.out_report','inputnode.slabref_to_wholebrain_bold_svg'),
+                ('outputnode.fsl_slab_bold_to_wholebrain_bold','inputnode.proc_fsl_slabref_to_wholebrain_bold'),
+            ]),
+            (slabref_bold_ref_wf,slabref_bold_preproc_derivatives_wf,[
+                ('outputnode.boldref','inputnode.distorted_boldref')
+            ]),
+            (slabref_bold_brainmask_wf,slabref_bold_preproc_derivatives_wf,[
+                ('outputnode.brainmask','inputnode.distorted_brainmask'),
+            ]),
+        ])
+
+        """
+        connect slabref bold buffer
+        """
+        wf.connect([
+            (slabref_bold_ref_wf,slabref_bold_buffer,[
+                ('outputnode.boldref','distorted_boldref')
+            ]),
+            (slabref_bold_brainmask_wf,slabref_bold_buffer,[
+                ('outputnode.brainmask','distorted_brainmask'),
+            ]),
+            (slabref_bold_to_wholebrain_bold_wf,slabref_bold_buffer,[
+                ('outputnode.fsl_slab_bold_to_wholebrain_bold','proc_fsl_slabref_to_wholebrain_bold'),
+                ('outputnode.itk_wholebrain_bold_to_slab_bold','proc_itk_wholebrain_to_slabref_bold'),
+            ]),
+        ])
+
+        if use_fmaps:
+            wf.connect([
+                (slabref_bold_unwarp_wf,slabref_bold_preproc_derivatives_wf,[
+                    ('outputnode.undistorted_bold','inputnode.proc_boldref'),
+                ]),
+                (slabref_bold_unwarp_wf,slabref_bold_buffer,[
+                    ('outputnode.undistorted_bold','proc_boldref'),
+                ]),
+            ])
+            
+    else:
+        # CHANGE
+        # wholebrain bold workflows should produce the following:
+        slabref_bold_inputs = {
+            'distorted_boldref': f"{BOLD_PREPROC_DIR}/{source_preproc_slabref_bold['distorted_boldref']}",
+            'distorted_brainmask': f"{BOLD_PREPROC_DIR}/{source_preproc_slabref_bold['distorted_brainmask']}",
+            'proc_fsl_slabref_to_wholebrain_bold': f"{BOLD_PREPROC_DIR}/{source_preproc_slabref_bold['proc_fsl_slabref_to_wholebrain_bold']}",
+            'proc_itk_wholebrain_to_slabref_bold': f"{BOLD_PREPROC_DIR}/{source_preproc_slabref_bold['proc_itk_wholebrain_to_slabref_bold']}",
+            'proc_boldref': f"{BOLD_PREPROC_DIR}/{source_preproc_slabref_bold['proc_boldref']}",
+        }
+        # set slabref_bold_buffer inputs
+        for _key, _path in slabref_bold_inputs.items():
+            if not use_fmaps and 'proc_boldref' == _key:
+                continue
+            assert os.path.exists(_path), f"{_path} does not exist."
+            setattr(slabref_bold_buffer.inputs, _key, _path)
 
     """
     Set-up slab bold workflows
@@ -785,123 +1042,38 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             (slab_inputnode,slab_bold_hmc_wf,[('slab_bold','inputnode.bold_file')]),
             (slab_bold_ref_wf,slab_bold_hmc_wf,[('outputnode.boldref','inputnode.bold_reference')])
         ])
-        
+
         """
-        brainmask sdc-uncorrected (or distorted) slab bold workflows
+        Register to slab reference image
         """
-        # get slab bold brainmask
-        slab_bold_brainmask_wf = init_bold_slab_brainmask_wf(name=f'{bold_slab_base}_brainmask_wf')
-        # save slab bold brainmask in derivative directories
-        source_brain, source_brainmask, _, _, _ = get_bold_brainmask_source_files(bold_slab)
-        slab_bold_brainmask_derivatives_wf = init_bold_brainmask_derivatives_wf(
-            DERIV_DIR,
-            source_brain,
-            source_brainmask,
-            bold_slab_base,
-            out_path_base=BRAINMASK_DIR.split('/')[-1],
-            name=f'{bold_slab_base}_brainmask_derivatives_wf'
+        slab_to_slabref_bold_wf = init_slab_to_slabref_bold_wf(
+            bold2t1w_dof=6,
+            name=f'{bold_slab_base}_slab_to_slabref_bold_wf'
         )
-        
         # connect
         wf.connect([
-            (slab_bold_ref_wf,slab_bold_brainmask_wf,[('outputnode.boldref','inputnode.slab_bold')]),
-            (wholebrain_bold_buffer,slab_bold_brainmask_wf,[
-                # Use wholebrain bold brainmask to perform slab bold brainmasking
-                ('distorted_dseg','inputnode.wholebrain_bold_dseg'),
-                ('distorted_boldref','inputnode.wholebrain_bold'),
-                ('distorted_brainmask','inputnode.wholebrain_bold_brainmask'),
-            ]),
-            (slab_bold_brainmask_wf,slab_bold_brainmask_derivatives_wf,[
-                ('outputnode.brain','inputnode.bold_brain'),
-                ('outputnode.brainmask','inputnode.bold_brainmask'),
-            ]),
+            (slabref_bold_buffer,slab_to_slabref_bold_wf,[('distorted_boldref','inputnode.slabref_bold')]),
+            (slab_bold_ref_wf,slab_to_slabref_bold_wf,[('outputnode.boldref','inputnode.slab_bold')])
         ])
 
-        if use_fmaps:
-            """
-            apply fmap to slab bold workflows
-            """
-            # register fmap to slab bold workflow
-            fmap_to_slab_bold_wf = init_fmap_to_slab_bold_wf(name=f'reg_fmap_to_{bold_slab_base}_wf')
-            # apply sdc to wholebrain bold
-            slab_bold_unwarp_wf = init_bold_sdc_wf(
-                use_fsl_gre_fmap=args.fmap_gre_fsl,
-                fmap_metadata=layout.get_metadata(phasediff),
-                name=f'{bold_slab_base}_unwarp_wf'
-            )
-            slab_bold_unwarp_wf.inputs.inputnode.bold_metadata = metadata
-
-            wf.connect([
-                (anat_to_fmap_wf,fmap_to_slab_bold_wf,[('outputnode.itk_fmap2anat','inputnode.itk_fmap2anat')]),
-                # use distorted wholebrain bold to slab bold affine to bring fmap to slab bold space
-                (wholebrain_bold_buffer,fmap_to_slab_bold_wf,[
-                    ('distorted_itk_t1_to_bold','inputnode.itk_anat2wholebrainbold')]),
-                (slab_bold_brainmask_wf,fmap_to_slab_bold_wf,[
-                    ('outputnode.itk_t1_to_bold','inputnode.itk_wholebrainbold2slabbold')]),
-                (fmap_to_slab_bold_wf,slab_bold_unwarp_wf,[('outputnode.itk_fmap2epi','inputnode.fmap2epi_xfm')]),
-                (fmap_buffer,slab_bold_unwarp_wf,[
-                    ('fmap_ref','inputnode.fmap_ref'),
-                    ('fmap','inputnode.fmap'),
-                ]),
-                (slab_bold_brainmask_wf,slab_bold_unwarp_wf,[
-                    ('outputnode.brain','inputnode.target_ref'),
-                    ('outputnode.brain','inputnode.target_mask'),
-                ]),
-            ])
-
         """
-        register sdc-corrected slab bold to sdc-corrected wholebrain bold
+        Brainmask slab image
         """
-        slab_bold_to_wholebrain_bold_wf = init_slab_bold_to_wholebrain_bold_wf(
-            bold2t1w_dof=args.reg_slab_to_wholebrain_dof,
-            use_bbr=args.reg_slab_to_wholebrain_bbr,
-            name=f'reg_{bold_slab_base}_to_wholebrain_bold_wf'
-        )
-        if use_fmaps:
-            # Use undistorted bold to estimate slab to wholebrain epi transformation
-            if args.reg_slab_to_wholebrain_undistorted:
-                wf.connect([
-                    (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
-                        ('undistorted_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
-                    ]),
-                    (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
-                        ('undistorted_boldref','inputnode.undistorted_wholebrain_bold'),
-                    ]),
-                    (slab_bold_unwarp_wf,slab_bold_to_wholebrain_bold_wf,[
-                        ('outputnode.undistorted_bold','inputnode.undistorted_slab_bold')
-                    ])
-                ])
-            # Use distorted bold to estimate slab to wholebrain epi transformation
-            else:
-                wf.connect([
-                    (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
-                        ('undistorted_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
-                    ]),
-                    (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
-                        ('distorted_boldref','inputnode.undistorted_wholebrain_bold'),
-                    ]),
-                    (slab_bold_brainmask_wf,slab_bold_to_wholebrain_bold_wf,[
-                        ('outputnode.brain','inputnode.undistorted_slab_bold')
-                    ])
-                ])
-        else:
-            wf.connect([
-                (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
-                    ('undistorted_dseg','inputnode.undistorted_wholebrain_bold_dseg'),
-                ]),
-                (wholebrain_bold_buffer,slab_bold_to_wholebrain_bold_wf,[
-                    ('distorted_boldref','inputnode.undistorted_wholebrain_bold'),
-                ]),
-                (slab_bold_brainmask_wf,slab_bold_to_wholebrain_bold_wf,[
-                    ('outputnode.brain','inputnode.undistorted_slab_bold')
-                ])
-            ])
+        slab_bold_brainmask_wf = init_bold_slab_brainmask_wf(name=f'{bold_slab_base}_brainmask_wf')
+        # connect
+        wf.connect([
+            (wholebrain_bold_buffer,slab_bold_brainmask_wf,[('distorted_brainmask','inputnode.wholebrain_bold_brainmask')]),
+            (slab_bold_ref_wf,slab_bold_brainmask_wf,[('outputnode.boldref','inputnode.slab_bold')]),
+            (slab_to_slabref_bold_wf,slab_bold_brainmask_wf,[('outputnode.itk_slabref_to_slab_bold','inputnode.itk_slabref_to_slab_bold')]),
+            (slabref_bold_buffer,slab_bold_brainmask_wf,[('proc_itk_wholebrain_to_slabref_bold','inputnode.itk_wholebrain_to_slabref_bold')]),
+        ])
         
         """
         Merge and apply transforms
         """
-        # merge sdc warp (slab-bold), 
-        # slab bold to wholebrain bold affine, 
+        # merge sdc warp (slab-bold),
+        # slab bold to slabref bold affine, 
+        # slabref bold to wholebrain bold affine, 
         # and wholebrain bold to anat affine
         # into a single warp
         merge_transforms_wf = init_fsl_merge_transforms_wf(
@@ -918,20 +1090,26 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         trans_slab_bold_to_anat_wf.inputs.inputnode.bold_metadata = metadata
 
         if use_fmaps:
+            NotImplemented
+            """
             wf.connect([
                 (slab_bold_unwarp_wf,merge_transforms_wf,[('outputnode.sdc_warp','inputnode.slab_sdc_warp')]),
             ])
+            """
         
         # connect
         wf.connect([
-            (slab_bold_to_wholebrain_bold_wf,merge_transforms_wf,[
-                ('outputnode.fsl_slab_bold_to_wholebrain_bold','inputnode.slab2wholebrain_aff')
+            (slab_to_slabref_bold_wf,merge_transforms_wf,[
+                ('outputnode.fsl_slab_to_slabref_bold','inputnode.slab2slabref_aff'),
+            ]),
+            (slabref_bold_buffer,merge_transforms_wf,[
+                ('proc_fsl_slabref_to_wholebrain_bold','inputnode.slabref2wholebrain_aff'),
             ]),
             (wholebrain_bold_buffer,merge_transforms_wf,[
-                ('undistorted_fsl_bold_to_t1','inputnode.wholebrain2anat_aff') # This needs to change too
+                ('proc_fsl_bold_to_t1','inputnode.wholebrain2anat_aff') # This needs to change too
             ]),
             (anat_buffer,merge_transforms_wf,[('fs_t1w_brain','inputnode.reference')]),
-            (slab_bold_brainmask_wf,merge_transforms_wf,[('outputnode.brain','inputnode.source')]),
+            (slab_bold_ref_wf,merge_transforms_wf,[('outputnode.boldref','inputnode.source')]),
             (slab_bold_brainmask_wf,trans_slab_bold_brainmask_to_anat_wf,[('outputnode.brainmask','inputnode.slab_bold_brainmask')]),
             (merge_transforms_wf,trans_slab_bold_brainmask_to_anat_wf,[
                 ('outputnode.slab2anat_warp','inputnode.t1_warp'),
@@ -996,8 +1174,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             source_preproc_slab_bold['bold_crownmask'],
             source_preproc_slab_bold['bold_hmc'],
             source_preproc_slab_bold['bold_sdc_warp'],
-            source_preproc_slab_bold['slab_bold_to_wholebrain_bold_mat'],
-            source_preproc_slab_bold['slab_bold_to_wholebrain_bold_svg'],
+            source_preproc_slab_bold['slab_bold_to_slabref_bold_mat'],
+            source_preproc_slab_bold['slab_bold_to_slabref_bold_svg'],
             source_preproc_slab_bold['slab_bold_to_t1_warp'],
             bold_slab_base,
             use_fmaps=use_fmaps,
@@ -1005,10 +1183,12 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         )
 
         if use_fmaps:
+            NotImplemented
+            """
             wf.connect([
                 (slab_bold_unwarp_wf,slab_bold_preproc_derivatives_wf,[('outputnode.sdc_warp','inputnode.bold_sdc_warp')]),
             ])
-
+            """
         
         # connect
         wf.connect([
@@ -1027,9 +1207,9 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 ('outputnode.rois_plot','inputnode.bold_roi_svg'),
             ]),
             (slab_bold_hmc_wf,slab_bold_preproc_derivatives_wf,[('outputnode.fsl_affines','inputnode.bold_hmc')]),
-            (slab_bold_to_wholebrain_bold_wf,slab_bold_preproc_derivatives_wf,[
-                ('outputnode.fsl_slab_bold_to_wholebrain_bold','inputnode.slab_bold_to_wholebrain_bold_mat'),
-                ('outputnode.out_report','inputnode.slab_bold_to_wholebrain_bold_svg')
+            (slab_to_slabref_bold_wf,slab_bold_preproc_derivatives_wf,[
+                ('outputnode.fsl_slab_to_slabref_bold','inputnode.slab_bold_to_slabref_bold_mat'),
+                ('outputnode.out_report','inputnode.slab_bold_to_slabref_bold_svg'),
             ]),
             (merge_transforms_wf,slab_bold_preproc_derivatives_wf,[('outputnode.slab2anat_warp','inputnode.slab_bold_to_t1_warp')]),
         ])

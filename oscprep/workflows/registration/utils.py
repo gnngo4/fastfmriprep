@@ -59,11 +59,11 @@ def init_fsl_merge_transforms_wf(
 ):
     """
     Combine the following transformations:
-    (1) slab SDC warp
-    (2) slab-bold to wholebrain-bold affine
-        - affine was generated from images that were sdc-ed
+    (1) slab SDC warp 
+    (2) slab-bold to slabref-bold affine
+    (2) slabref-bold to wholebrain-bold affine
     (3) wholebrain-bold to t1 affine
-        - affine was generated fro a wholebrain-bold sdc-ed and a t1 preprocessed with freesurfer
+    
 
     Parameters
     ----------
@@ -87,7 +87,8 @@ def init_fsl_merge_transforms_wf(
         niu.IdentityInterface(
             [
                 'slab_sdc_warp',
-                'slab2wholebrain_aff',
+                'slab2slabref_aff',
+                'slabref2wholebrain_aff',
                 'wholebrain2anat_aff',
                 'source',
                 'reference'
@@ -114,35 +115,49 @@ def init_fsl_merge_transforms_wf(
         name='slab2wholebrain_aff'
     )
 
+    slab2anat_aff = pe.Node(
+        fsl.ConvertXFM(
+            out_file = 'merged_affine.txt',
+            concat_xfm = True,
+        ),
+        name='slab2anat_aff'
+    )
+
     gen_ref = pe.Node(
         GenerateSamplingReference(),
         name='generate_reference'
     )
 
-    slab2wholebrain_warp = pe.Node(
+    slab2anat_warp = pe.Node(
         fsl.ConvertWarp(),
-        name='slab2wholebrain_warp'
+        name='slab2anat_warp'
     )
 
     # Connect
     workflow.connect([
         (inputnode,slab2wholebrain_aff,[
+            ('slabref2wholebrain_aff','in_file2'),
+            ('slab2slabref_aff','in_file'),
+        ]),
+        (inputnode,slab2anat_aff,[
             ('wholebrain2anat_aff','in_file2'),
-            ('slab2wholebrain_aff','in_file')
+        ]),
+        (slab2wholebrain_aff,slab2anat_aff,[
+            ('out_file','in_file'),
         ]),
         (inputnode,gen_ref,[
             ('source','moving_image'),
-            ('reference','fixed_image')
+            ('reference','fixed_image'),
         ]),
-        (gen_ref,slab2wholebrain_warp,[('out_file','reference')]),
-        (slab2wholebrain_aff,slab2wholebrain_warp,[('out_file','postmat')]),
+        (gen_ref,slab2anat_warp,[('out_file','reference')]),
+        (slab2anat_aff,slab2anat_warp,[('out_file','postmat')]),
         (gen_ref,outputnode,[('out_file','reference_resampled')]),
-        (slab2wholebrain_warp,outputnode,[('out_file','slab2anat_warp')])
+        (slab2anat_warp,outputnode,[('out_file','slab2anat_warp')])
     ])
 
     if use_fmaps:
         workflow.connect([
-            (inputnode,slab2wholebrain_warp,[('slab_sdc_warp','warp1')]),
+            (inputnode,slab2anat_warp,[('slab_sdc_warp','warp1')]),
         ])
 
     return workflow

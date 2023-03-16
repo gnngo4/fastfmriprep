@@ -54,7 +54,7 @@ def _BoldToT1Transform(bold_path,hmc_mats,bold_to_t1_warp,t1_resampled,repetitio
             hmc affine and t1 warp and applying the warp.
             [cmd] Merge affine and warp:
             {convert_warp.cmdline}
-            [cmd] Apply mergd warp:
+            [cmd] Apply merged warp:
             {apply_warp.cmdline}
             """
             )

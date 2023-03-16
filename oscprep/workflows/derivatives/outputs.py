@@ -116,13 +116,13 @@ def init_wholebrain_bold_preproc_derivatives_wf(
     distorted_dseg_base,
     distorted_itk_bold_to_t1_base,
     distorted_itk_t1_to_bold_base,
-    undistorted_itk_bold_to_t1_base,
-    undistorted_itk_t1_to_bold_base,
-    undistorted_fsl_bold_to_t1_base,
-    undistorted_fsl_t1_to_bold_base,
-    undistorted_dseg_base,
-    undistorted_spacet1_boldref_base,
-    undistorted_boldref_base,
+    proc_itk_bold_to_t1_base,
+    proc_itk_t1_to_bold_base,
+    proc_fsl_bold_to_t1_base,
+    proc_fsl_t1_to_bold_base,
+    proc_dseg_base,
+    proc_spacet1_boldref_base,
+    proc_boldref_base,
     use_fmaps=True,
     workflow_name_base='wholebrain_bold',
     out_path_base='bold_preproc',
@@ -148,13 +148,13 @@ def init_wholebrain_bold_preproc_derivatives_wf(
             'distorted_dseg', #
             'distorted_itk_bold_to_t1',  
             'distorted_itk_t1_to_bold', #
-            'undistorted_itk_bold_to_t1',
-            'undistorted_itk_t1_to_bold',
-            'undistorted_fsl_bold_to_t1', #
-            'undistorted_fsl_t1_to_bold',
-            'undistorted_dseg', #
-            'undistorted_spacet1_boldref',
-            'undistorted_boldref',
+            'proc_itk_bold_to_t1',
+            'proc_itk_t1_to_bold',
+            'proc_fsl_bold_to_t1', #
+            'proc_fsl_t1_to_bold',
+            'proc_dseg', #
+            'proc_spacet1_boldref',
+            'proc_boldref',
         ]),
         name="inputnode",
     )
@@ -203,7 +203,7 @@ def init_wholebrain_bold_preproc_derivatives_wf(
     for _dir in [sub_ses_wholebrain_bold_dir]:
         if not os.path.isdir(_dir):
             os.makedirs(_dir)
-        for _subdir in ['distorted','undistorted']:
+        for _subdir in ['distorted']:
             if not os.path.isdir(f"{_dir}/{_subdir}"):
                 os.makedirs(f"{_dir}/{_subdir}")
                 
@@ -260,21 +260,21 @@ def init_wholebrain_bold_preproc_derivatives_wf(
     )
 
     """
-    ds_undistorted_itk_bold_to_t1 = pe.Node(
+    ds_proc_itk_bold_to_t1 = pe.Node(
         ExportFile(
-            out_file=f"{output_dir}/{out_path_base}/{undistorted_itk_bold_to_t1_base}",
+            out_file=f"{output_dir}/{out_path_base}/{proc_itk_bold_to_t1_base}",
             check_extension=False,
             clobber=True
         ),
-        name=f"ds_{workflow_name_base}_undistorted_itk_bold_to_t1",
+        name=f"ds_{workflow_name_base}_proc_itk_bold_to_t1",
         run_without_submitting=True
     )
     """
 
     """
-    ds_undistorted_itk_t1_to_bold = pe.Node(
+    ds_proc_itk_t1_to_bold = pe.Node(
         ExportFile(
-            out_file=f"{output_dir}/{out_path_base}/{undistorted_itk_t1_to_bold_base}",
+            out_file=f"{output_dir}/{out_path_base}/{proc_itk_t1_to_bold_base}",
             check_extension=False,
             clobber=True
         ),
@@ -283,46 +283,46 @@ def init_wholebrain_bold_preproc_derivatives_wf(
     )
     """
 
-    ds_undistorted_fsl_bold_to_t1 = pe.Node(
+    ds_proc_fsl_bold_to_t1 = pe.Node(
         ExportFile(
-            out_file=f"{output_dir}/{out_path_base}/{undistorted_fsl_bold_to_t1_base}",
+            out_file=f"{output_dir}/{out_path_base}/{proc_fsl_bold_to_t1_base}",
             check_extension=False,
             clobber=True
         ),
-        name=f"ds_{workflow_name_base}_undistorted_fsl_bold_to_t1",
+        name=f"ds_{workflow_name_base}_proc_fsl_bold_to_t1",
         run_without_submitting=True
     )
 
     """
-    ds_undistorted_fsl_t1_to_bold = pe.Node(
+    ds_proc_fsl_t1_to_bold = pe.Node(
         ExportFile(
-            out_file=f"{output_dir}/{out_path_base}/{undistorted_fsl_t1_to_bold_base}",
+            out_file=f"{output_dir}/{out_path_base}/{proc_fsl_t1_to_bold_base}",
             check_extension=False,
             clobber=True
         ),
-        name=f"ds_{workflow_name_base}_undistorted_fsl_t1_to_bold",
+        name=f"ds_{workflow_name_base}_proc_fsl_t1_to_bold",
         run_without_submitting=True
     )
     """
 
-    ds_undistorted_dseg = pe.Node(
+    ds_proc_dseg = pe.Node(
         ExportFile(
-            out_file=f"{output_dir}/{out_path_base}/{undistorted_dseg_base}",
+            out_file=f"{output_dir}/{out_path_base}/{proc_dseg_base}",
             check_extension=False,
             clobber=True
         ),
-        name=f"ds_{workflow_name_base}_undistorted_dseg",
+        name=f"ds_{workflow_name_base}_proc_dseg",
         run_without_submitting=True
     )
 
     """
-    ds_undistorted_spacet1_boldref = pe.Node(
+    ds_proc_spacet1_boldref = pe.Node(
         ExportFile(
-            out_file=f"{output_dir}/{out_path_base}/{undistorted_spacet1_boldref_base}",
+            out_file=f"{output_dir}/{out_path_base}/{proc_spacet1_boldref_base}",
             check_extension=False,
             clobber=True
         ),
-        name=f"ds_{workflow_name_base}_undistorted_spacet1_boldref",
+        name=f"ds_{workflow_name_base}_proc_spacet1_boldref",
         run_without_submitting=True
     )
     """
@@ -336,32 +336,177 @@ def init_wholebrain_bold_preproc_derivatives_wf(
         (inputnode, ds_distorted_dseg,[('distorted_dseg','in_file')]),
         #(inputnode, ds_distorted_itk_bold_to_t1,[('distorted_itk_bold_to_t1','in_file')]),
         (inputnode, ds_distorted_itk_t1_to_bold,[('distorted_itk_t1_to_bold','in_file')]),
-        #(inputnode, ds_undistorted_itk_bold_to_t1,[('undistorted_itk_bold_to_t1','in_file')]),
-        #(inputnode, ds_undistorted_itk_t1_to_bold,[('undistorted_itk_t1_to_bold','in_file')]),
-        (inputnode, ds_undistorted_fsl_bold_to_t1,[('undistorted_fsl_bold_to_t1','in_file')]),
-        #(inputnode, ds_undistorted_fsl_t1_to_bold,[('undistorted_fsl_t1_to_bold','in_file')]),
-        (inputnode, ds_undistorted_dseg,[('undistorted_dseg','in_file')]),
-        #(inputnode, ds_undistorted_spacet1_boldref,[('undistorted_spacet1_boldref','in_file')]),
+        #(inputnode, ds_proc_itk_bold_to_t1,[('proc_itk_bold_to_t1','in_file')]),
+        #(inputnode, ds_proc_itk_t1_to_bold,[('proc_itk_t1_to_bold','in_file')]),
+        (inputnode, ds_proc_fsl_bold_to_t1,[('proc_fsl_bold_to_t1','in_file')]),
+        #(inputnode, ds_proc_fsl_t1_to_bold,[('proc_fsl_t1_to_bold','in_file')]),
+        (inputnode, ds_proc_dseg,[('proc_dseg','in_file')]),
+        #(inputnode, ds_proc_spacet1_boldref,[('proc_spacet1_boldref','in_file')]),
     ])
     
     if use_fmaps:
         
-        ds_undistorted_boldref = pe.Node(
+        ds_proc_boldref = pe.Node(
             ExportFile(
-                out_file=f"{output_dir}/{out_path_base}/{undistorted_boldref_base}",
+                out_file=f"{output_dir}/{out_path_base}/{proc_boldref_base}",
                 check_extension=False,
                 clobber=True
             ),
-            name=f"ds_{workflow_name_base}_undistorted_boldref",
+            name=f"ds_{workflow_name_base}_proc_boldref",
             run_without_submitting=True
         )
 
         workflow.connect([
-            (inputnode, ds_undistorted_boldref,[('undistorted_boldref','in_file')]),
+            (inputnode, ds_proc_boldref,[('proc_boldref','in_file')]),
         ])
     
     return workflow
 
+def init_slab_reference_bold_preproc_derivatives_wf(
+    output_dir,
+    sub_id,
+    ses_id,
+    slabref_to_wholebrain_bold_mat_base,
+    slabref_to_wholebrain_bold_svg_base,
+    distorted_boldref_base,
+    distorted_brainmask_base,
+    distorted_itk_slabref_to_wholebrain_bold_base,
+    distorted_itk_wholebrain_to_slabref_bold_base,
+    proc_itk_slabref_to_wholebrain_bold_base,
+    proc_itk_wholebrain_to_slabref_bold_base,
+    proc_fsl_slabref_to_wholebrain_bold_base,
+    proc_fsl_wholebrain_to_slabref_bold_base,
+    proc_boldref_base,
+    use_fmaps=True,
+    workflow_name_base='slabref_bold',
+    out_path_base='bold_preproc',
+    name=None
+):
+    
+    from niworkflows.interfaces.bids import DerivativesDataSink
+    from nipype.interfaces.io import ExportFile
+    from nipype.pipeline import engine as pe
+
+    if name is None:
+        name = f'{workflow_name_base}_preproc_derivatives_wf'
+        
+    workflow = Workflow(name=name)
+    
+    inputnode = pe.Node(
+        niu.IdentityInterface(fields=[
+            'slabref_to_wholebrain_bold_mat',
+            'slabref_to_wholebrain_bold_svg',
+            'distorted_boldref',
+            'distorted_brainmask',
+            'distorted_itk_slabref_to_wholebrain_bold',
+            'distorted_itk_wholebrain_to_slabref_bold',
+            'proc_itk_slabref_to_wholebrain_bold',
+            'proc_itk_wholebrain_to_slabref_bold',
+            'proc_fsl_slabref_to_wholebrain_bold',
+            'proc_fsl_wholebrain_to_slabref_bold',
+            'proc_boldref',
+        ]),
+        name="inputnode",
+    )
+    
+    """
+    slabref bold preprocessing (prereqs for running slab bold preprocessing)
+    """
+    sub_ses_slabref_bold_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/slab_reference_bold"
+    for _dir in [sub_ses_slabref_bold_dir]:
+        if not os.path.isdir(_dir):
+            os.makedirs(_dir)
+        for _subdir in ['distorted']:
+            if not os.path.isdir(f"{_dir}/{_subdir}"):
+                os.makedirs(f"{_dir}/{_subdir}")
+    
+    ds_slabref_to_wholebrain_bold_mat = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{slabref_to_wholebrain_bold_mat_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_slabref_to_wholebrain_bold_mat",
+        run_without_submitting=True
+    )
+        
+    ds_slabref_to_wholebrain_bold_svg = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{slabref_to_wholebrain_bold_svg_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_slabref_to_wholebrain_bold_svg",
+        run_without_submitting=True
+    )
+    
+    ds_distorted_boldref = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{distorted_boldref_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_distorted_boldref",
+        run_without_submitting=True
+    )
+    
+    ds_distorted_brainmask = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{distorted_brainmask_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_distorted_brainmask",
+        run_without_submitting=True
+    )
+    
+    ds_proc_itk_wholebrain_to_slabref_bold = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{proc_itk_wholebrain_to_slabref_bold_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_proc_itk_wholebrain_to_slabref_bold",
+        run_without_submitting=True
+    )
+    
+    ds_proc_fsl_slabref_to_wholebrain_bold = pe.Node(
+        ExportFile(
+            out_file=f"{output_dir}/{out_path_base}/{proc_fsl_slabref_to_wholebrain_bold_base}",
+            check_extension=False,
+            clobber=True
+        ),
+        name=f"ds_{workflow_name_base}_proc_fsl_slabref_to_wholebrain_bold",
+        run_without_submitting=True
+    )
+    
+    workflow.connect([
+        (inputnode, ds_slabref_to_wholebrain_bold_mat,[('slabref_to_wholebrain_bold_mat','in_file')]),
+        (inputnode, ds_slabref_to_wholebrain_bold_svg,[('slabref_to_wholebrain_bold_svg','in_file')]),
+        (inputnode, ds_distorted_boldref,[('distorted_boldref','in_file')]),
+        (inputnode, ds_distorted_brainmask,[('distorted_brainmask','in_file')]),
+        (inputnode, ds_proc_fsl_slabref_to_wholebrain_bold,[('proc_fsl_slabref_to_wholebrain_bold','in_file')]),
+        (inputnode, ds_proc_itk_wholebrain_to_slabref_bold,[('proc_itk_wholebrain_to_slabref_bold','in_file')]),
+    ])
+    
+    if use_fmaps:
+        
+        ds_proc_boldref = pe.Node(
+            ExportFile(
+                out_file=f"{output_dir}/{out_path_base}/{proc_boldref_base}",
+                check_extension=False,
+                clobber=True
+            ),
+            name=f"ds_{workflow_name_base}_proc_boldref",
+            run_without_submitting=True
+        )
+
+        workflow.connect([
+            (inputnode, ds_proc_boldref,[('proc_boldref','in_file')]),
+        ])
+
+    return workflow
+    
 
 def init_slab_bold_preproc_derivatives_wf(
     output_dir,
@@ -379,8 +524,8 @@ def init_slab_bold_preproc_derivatives_wf(
     bold_crownmask_base,
     bold_hmc_base,
     bold_sdc_warp_base,
-    slab_bold_to_wholebrain_bold_mat_base,
-    slab_bold_to_wholebrain_bold_svg_base,
+    slab_bold_to_slabref_bold_mat_base,
+    slab_bold_to_slabref_bold_svg_base,
     slab_bold_to_t1_warp_base,
     workflow_name_base,
     use_fmaps=True,
@@ -412,8 +557,8 @@ def init_slab_bold_preproc_derivatives_wf(
             'bold_crownmask',
             'bold_hmc',
             'bold_sdc_warp',
-            'slab_bold_to_wholebrain_bold_mat',
-            'slab_bold_to_wholebrain_bold_svg',
+            'slab_bold_to_slabref_bold_mat',
+            'slab_bold_to_slabref_bold_svg',
             'slab_bold_to_t1_warp'
         ]),
         name="inputnode",
@@ -539,22 +684,22 @@ def init_slab_bold_preproc_derivatives_wf(
     )
     ds_bold_hmc.inputs.save_base = f"{output_dir}/{out_path_base}/{bold_hmc_base}"
     
-    ds_slab_to_wholebrain_mat = pe.Node(
+    ds_slab_to_slabref_mat = pe.Node(
         ExportFile(
-            out_file=f"{output_dir}/{out_path_base}/{slab_bold_to_wholebrain_bold_mat_base}",
+            out_file=f"{output_dir}/{out_path_base}/{slab_bold_to_slabref_bold_mat_base}",
             check_extension=False,
             clobber=True
         ),
-        name=f"ds_{workflow_name_base}_wholebrain_mat",
+        name=f"ds_{workflow_name_base}_slabref_mat",
         run_without_submitting=True
     )
-    ds_slab_to_wholebrain_svg = pe.Node(
+    ds_slab_to_slabref_svg = pe.Node(
         ExportFile(
-            out_file=f"{output_dir}/{out_path_base}/{slab_bold_to_wholebrain_bold_svg_base}",
+            out_file=f"{output_dir}/{out_path_base}/{slab_bold_to_slabref_bold_svg_base}",
             check_extension=False,
             clobber=True
         ),
-        name=f"ds_{workflow_name_base}_wholebrain_svg",
+        name=f"ds_{workflow_name_base}_slabref_svg",
         run_without_submitting=True
     )
     ds_slab_to_t1 = pe.Node(
@@ -579,8 +724,8 @@ def init_slab_bold_preproc_derivatives_wf(
         (inputnode, ds_bold_acompcor_wmcsf, [('bold_acompcor_wmcsf','in_file')]),
         (inputnode, ds_bold_tcompcor, [('bold_tcompcor','in_file')]),
         (inputnode, ds_bold_crownmask, [('bold_crownmask','in_file')]),
-        (inputnode, ds_slab_to_wholebrain_mat,[('slab_bold_to_wholebrain_bold_mat','in_file')]),
-        (inputnode, ds_slab_to_wholebrain_svg,[('slab_bold_to_wholebrain_bold_svg','in_file')]),
+        (inputnode, ds_slab_to_slabref_mat,[('slab_bold_to_slabref_bold_mat','in_file')]),
+        (inputnode, ds_slab_to_slabref_svg,[('slab_bold_to_slabref_bold_svg','in_file')]),
         (inputnode, ds_slab_to_t1,[('slab_bold_to_t1_warp','in_file')]),
     ])
     
@@ -615,3 +760,8 @@ def save_slab_bold_hmc(hmc_list,save_base):
         ds_vol_affine = ExportFile(out_file=f"{save_base}/{_vol_affine}")
         ds_vol_affine.inputs.in_file = vol_affine
         ds_vol_affine.run()
+
+    tar_file = f"{save_base}.tar.gz"
+    tar_cmd = ' '.join(['tar','-czvf',tar_file,'-C',save_base,'.','--remove-files'])
+    os.system(tar_cmd)
+    assert os.path.exists(tar_file)

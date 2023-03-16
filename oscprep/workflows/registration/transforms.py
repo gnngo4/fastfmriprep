@@ -200,6 +200,7 @@ def init_wholebrain_bold_to_anat_wf(
     from niworkflows.interfaces.nibabel import GenerateSamplingReference
     
     from nipype.interfaces.fsl.maths import Threshold
+    from nipype.interfaces.ants import N4BiasFieldCorrection
 
     workflow = Workflow(name=name)
 
@@ -230,6 +231,11 @@ def init_wholebrain_bold_to_anat_wf(
             ]
         ),
         name="outputnode"
+    )
+
+    n4_bold = pe.Node(
+        N4BiasFieldCorrection(),
+        name='n4_bias_correct_bold'
     )
 
     wholebrain_bold_to_anat = init_bbreg_wf(
@@ -273,13 +279,15 @@ def init_wholebrain_bold_to_anat_wf(
     inv_itk_to_fsl = init_itk_to_fsl_affine_wf(name='itk2fsl_t1_to_wholebrain_bold')
 
     workflow.connect([
+        (inputnode, n4_bold,[('undistorted_bold','input_image')]),
+        (n4_bold, wholebrain_bold_to_anat,[('output_image','inputnode.in_file')]),
         (inputnode, wholebrain_bold_to_anat,[
             ('fsnative2t1w_xfm','inputnode.fsnative2t1w_xfm'),
             ('subjects_dir','inputnode.subjects_dir'),
             ('subject_id','inputnode.subject_id'),
             ('t1w_dseg','inputnode.t1w_dseg'),
             ('t1w_brain','inputnode.t1w_brain'),
-            ('undistorted_bold','inputnode.in_file')
+            #('undistorted_bold','inputnode.in_file')
         ]),
         (inputnode, dseg_to_wholebrain_bold,[
             ('t1w_dseg','input_image'),
@@ -329,6 +337,7 @@ def init_slab_bold_to_wholebrain_bold_wf(
 
     from oscprep.workflows.registration.utils import init_itk_to_fsl_affine_wf
     from fmriprep.workflows.bold.registration import init_fsl_bbr_wf
+    from nipype.interfaces.ants import N4BiasFieldCorrection
 
     workflow = Workflow(name=name)
 
@@ -355,6 +364,11 @@ def init_slab_bold_to_wholebrain_bold_wf(
         ),
         name="outputnode"
     )
+    
+    n4_bold = pe.Node(
+        N4BiasFieldCorrection(),
+        name='n4_bias_correct_bold'
+    )
 
     slab_bold_to_wholebrain_bold = init_fsl_bbr_wf(
         bold2t1w_dof=bold2t1w_dof,
@@ -368,14 +382,16 @@ def init_slab_bold_to_wholebrain_bold_wf(
     inv_itk_to_fsl = init_itk_to_fsl_affine_wf(name='itk2fsl_wholebrain_bold_to_slab_bold')
 
     workflow.connect([
+        (inputnode, n4_bold, [('undistorted_slab_bold','input_image')]),
+        (n4_bold, slab_bold_to_wholebrain_bold, [('output_image','inputnode.in_file')]),
         (inputnode, slab_bold_to_wholebrain_bold,[
             ('undistorted_wholebrain_bold','inputnode.t1w_brain'),
             ('undistorted_wholebrain_bold_dseg','inputnode.t1w_dseg'),
-            ('undistorted_slab_bold','inputnode.in_file')
+            #('undistorted_slab_bold','inputnode.in_file')
         ]),
         (slab_bold_to_wholebrain_bold,outputnode,[
             ('outputnode.itk_bold_to_t1','itk_slab_bold_to_wholebrain_bold'),
-            ('outputnode.itk_t1_to_bold','itk_whole_bold_to_slab_bold')
+            ('outputnode.itk_t1_to_bold','itk_wholebrain_bold_to_slab_bold')
         ]),
         (inputnode, fwd_itk_to_fsl,[
             ('undistorted_slab_bold','inputnode.source'),
@@ -391,6 +407,88 @@ def init_slab_bold_to_wholebrain_bold_wf(
         (inv_itk_to_fsl,outputnode,[('outputnode.fsl_affine','fsl_wholebrain_bold_to_slab_bold')]),
         # report
         (slab_bold_to_wholebrain_bold,outputnode,[('outputnode.out_report','out_report')]),
+    ])
+
+    return workflow
+
+def init_slab_to_slabref_bold_wf(
+    bold2t1w_dof=6,
+    omp_nthreads=8,
+    name="reg_slab_to_slabref_bold_wf"
+    ):
+
+    from niworkflows.engine.workflows import LiterateWorkflow as Workflow
+
+    from oscprep.workflows.registration.utils import init_itk_to_fsl_affine_wf
+    from fmriprep.workflows.bold.registration import init_fsl_bbr_wf
+    from nipype.interfaces.ants import N4BiasFieldCorrection
+
+    workflow = Workflow(name=name)
+
+    inputnode = pe.Node(
+        niu.IdentityInterface(
+            fields=[
+                "slabref_bold",
+                "slab_bold",
+            ]
+        ),
+        name="inputnode"
+    )
+
+    outputnode = pe.Node(
+        niu.IdentityInterface(
+            fields=[
+                "itk_slab_to_slabref_bold",
+                "itk_slabref_to_slab_bold",
+                "fsl_slab_to_slabref_bold",
+                "fsl_slabref_to_slab_bold",
+                "out_report"
+            ]
+        ),
+        name="outputnode"
+    )
+    
+    n4_bold = pe.Node(
+        N4BiasFieldCorrection(),
+        name='n4_bias_correct_bold'
+    )
+
+    slab_to_slabref_bold = init_fsl_bbr_wf(
+        bold2t1w_dof=bold2t1w_dof,
+        use_bbr=False,
+        bold2t1w_init='register',
+        omp_nthreads=omp_nthreads,
+        name='reg_slab_to_slabref_bold'
+    )
+
+    fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(name='itk2fsl_slab_to_slabref_bold')
+    inv_itk_to_fsl = init_itk_to_fsl_affine_wf(name='itk2fsl_slabref_to_slab_bold')
+
+    workflow.connect([
+        (inputnode, n4_bold,[('slab_bold','input_image')]),
+        (n4_bold, slab_to_slabref_bold,[('output_image','inputnode.in_file')]),
+        (inputnode, slab_to_slabref_bold,[
+            ('slabref_bold','inputnode.t1w_brain'),
+            #('slab_bold','inputnode.in_file'),
+        ]),
+        (slab_to_slabref_bold,outputnode,[
+            ('outputnode.itk_bold_to_t1','itk_slab_to_slabref_bold'),
+            ('outputnode.itk_t1_to_bold','itk_slabref_to_slab_bold')
+        ]),
+        (inputnode, fwd_itk_to_fsl,[
+            ('slab_bold','inputnode.source'),
+            ('slabref_bold','inputnode.reference')
+        ]),
+        (slab_to_slabref_bold,fwd_itk_to_fsl,[('outputnode.itk_bold_to_t1','inputnode.itk_affine')]),
+        (fwd_itk_to_fsl,outputnode,[('outputnode.fsl_affine','fsl_slab_to_slabref_bold')]),
+        (inputnode, inv_itk_to_fsl,[
+            ('slabref_bold','inputnode.reference'),
+            ('slab_bold','inputnode.source')
+        ]),
+        (slab_to_slabref_bold,inv_itk_to_fsl,[('outputnode.itk_t1_to_bold','inputnode.itk_affine')]),
+        (inv_itk_to_fsl,outputnode,[('outputnode.fsl_affine','fsl_slabref_to_slab_bold')]),
+        # report
+        (slab_to_slabref_bold,outputnode,[('outputnode.out_report','out_report')]),
     ])
 
     return workflow

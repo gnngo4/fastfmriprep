@@ -4,9 +4,9 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
 def init_bold_wholebrain_brainmask_wf(
-    omp_nthreads=8,
+    bold2t1w_dof=9,
     use_bbr=True,
-    bold2t1w_init = 'register',
+    omp_nthreads=8,
     name='skullstrip_wholebrain_bold_wf'
 ):
     """
@@ -28,6 +28,7 @@ def init_bold_wholebrain_brainmask_wf(
     from fmriprep.workflows.bold.registration import init_bbreg_wf
     from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
     from nipype.interfaces.fsl import ApplyMask, DilateImage
+    from nipype.interfaces.ants import N4BiasFieldCorrection
     
     workflow = Workflow(name=name)
     
@@ -50,9 +51,20 @@ def init_bold_wholebrain_brainmask_wf(
         niu.IdentityInterface(['brain','brainmask','dseg','itk_bold_to_t1','itk_t1_to_bold']),
         name='outputnode',
     )
+    
+    # n4 
+    n4_bold = pe.Node(
+        N4BiasFieldCorrection(),
+        name='n4_bias_correct_bold'
+    )
 
     # bbreg t1-to-wholebrain-bold
-    bbr_wf = init_bbreg_wf(use_bbr=use_bbr,bold2t1w_dof=9,bold2t1w_init=bold2t1w_init,omp_nthreads=omp_nthreads)
+    bbr_wf = init_bbreg_wf(
+        use_bbr=use_bbr,
+        bold2t1w_dof=bold2t1w_dof,
+        bold2t1w_init='register',
+        omp_nthreads=omp_nthreads
+    )
 
     # transform t1w_brainmask to wholebrain-bold space
     t1brainmask_to_bold = pe.Node(
@@ -91,8 +103,10 @@ def init_bold_wholebrain_brainmask_wf(
 
     # Connect
     workflow.connect([
+        (inputnode, n4_bold, [('wholebrain_bold','input_image')]),
+        (n4_bold, bbr_wf, [('output_image','inputnode.in_file')]),
         (inputnode, bbr_wf, [
-            ('wholebrain_bold','inputnode.in_file'),
+            #('wholebrain_bold','inputnode.in_file'),
             ('fsnative2t1w_xfm','inputnode.fsnative2t1w_xfm'),
             ('subjects_dir','inputnode.subjects_dir'),
             ('subject_id','inputnode.subject_id'),
@@ -123,7 +137,9 @@ def init_bold_wholebrain_brainmask_wf(
 
     return workflow
 
-def init_bold_slab_brainmask_wf(
+def init_bold_slabref_brainmask_wf(
+    bold2t1w_dof=6,
+    use_bbr=True,
     omp_nthreads=8,
     name='skullstrip_slab_bold_wf'
 ):
@@ -147,6 +163,7 @@ def init_bold_slab_brainmask_wf(
     from fmriprep.workflows.bold.registration import init_fsl_bbr_wf
     from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
     from nipype.interfaces.fsl import ApplyMask
+    from nipype.interfaces.ants import N4BiasFieldCorrection
     
     workflow = Workflow(name=name)
     
@@ -166,9 +183,20 @@ def init_bold_slab_brainmask_wf(
         niu.IdentityInterface(['brain','brainmask','itk_bold_to_t1','itk_t1_to_bold']), # bold == slab & t1 == wholebrain
         name='outputnode',
     )
+    
+    # n4 
+    n4_bold = pe.Node(
+        N4BiasFieldCorrection(),
+        name='n4_bias_correct_bold'
+    )
 
     # fsl_bbr slab-bold-to-wholebrain-bold
-    fsl_bbr_wf = init_fsl_bbr_wf(use_bbr=True,bold2t1w_dof=6,bold2t1w_init='register',omp_nthreads=omp_nthreads)
+    fsl_bbr_wf = init_fsl_bbr_wf(
+        bold2t1w_dof=bold2t1w_dof,
+        use_bbr=use_bbr,
+        bold2t1w_init='register',
+        omp_nthreads=omp_nthreads
+    )
 
     # transform wholebrain-bold brainmask to slab-bold space
     boldbrainmask_to_slab = pe.Node(
@@ -189,8 +217,10 @@ def init_bold_slab_brainmask_wf(
     
     # Connect
     workflow.connect([
+        (inputnode, n4_bold, [('slab_bold','input_image')]),
+        (n4_bold, fsl_bbr_wf, [('output_image','inputnode.in_file')]),
         (inputnode, fsl_bbr_wf, [
-            ('slab_bold','inputnode.in_file'),
+            #('slab_bold','inputnode.in_file'),
             ('wholebrain_bold_dseg','inputnode.t1w_dseg'),
             ('wholebrain_bold','inputnode.t1w_brain')
         ]),
@@ -210,6 +240,79 @@ def init_bold_slab_brainmask_wf(
     ])
 
     return workflow
+
+def init_bold_slab_brainmask_wf(
+    name='skullstrip_slab_bold_wf'
+):
+    """
+    Skullstrip slab sbref by using a wholebrain-bold brainmask,
+    and a wholebrain-bold-to-slabref-bold-to-slab bold 
+    registration approach
+
+    Parameters
+    ----------
+
+    Inputs
+    ------
+
+    Outputs
+    -------
+
+    """
+    from niworkflows.engine.workflows import LiterateWorkflow as Workflow
+    
+    from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
+    from nipype.interfaces.fsl import ApplyMask
+    
+    workflow = Workflow(name=name)
+    
+    inputnode = pe.Node(
+        niu.IdentityInterface(
+            [
+                'slab_bold',
+                'wholebrain_bold_brainmask', # Generated from ``init_brainmask_wholebrain_bold_wf``
+                'itk_wholebrain_to_slabref_bold',
+                'itk_slabref_to_slab_bold',
+            ]
+        ),
+        name='inputnode',
+    )
+
+    outputnode = pe.Node(
+        niu.IdentityInterface(['brainmask']),
+        name='outputnode',
+    )
+
+    concat_transforms = pe.Node(
+        niu.Function(function=_concat_transforms_2, input_names=["xfm_1","xfm_2"]),
+        name="concat_transforms"
+    )
+
+    # transform wholebrain-bold brainmask to slab-bold space
+    boldbrainmask_to_slab = pe.Node(
+        ApplyTransforms(
+            interpolation="MultiLabel",
+            float=True
+        ),
+        name='slab_bold_brainmask'
+    )
+
+    # Connect
+    workflow.connect([
+        (inputnode, boldbrainmask_to_slab, [
+            ('wholebrain_bold_brainmask','input_image'),
+            ('slab_bold','reference_image'),
+        ]),
+        (inputnode,concat_transforms,[
+            ('itk_wholebrain_to_slabref_bold','xfm_1'),
+            ('itk_slabref_to_slab_bold','xfm_2'),
+        ]),
+        (concat_transforms,boldbrainmask_to_slab,[('out','transforms')]),
+        (boldbrainmask_to_slab,outputnode,[('output_image','brainmask')])
+    ])
+
+    return workflow
+
 
 def init_undistort_bold_slab_brainmask_to_t1_wf(
     name='undistort_slab_bold_brainmask_to_t1_wf'
@@ -275,3 +378,6 @@ def init_undistort_bold_slab_brainmask_to_t1_wf(
 def _listify(x):
 
     return [x]
+
+def _concat_transforms_2(xfm_1,xfm_2):
+    return [xfm_2,xfm_1]
