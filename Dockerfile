@@ -21,9 +21,23 @@ RUN apt-get update && \
                     unzip \
                     xvfb && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-RUN pip install --no-cache-dir --upgrade pip && \
-	pip install --no-cache-dir smriprep fmriprep sdcflows \ 
-	pip install --no-cache-dir notebook numpy nibabel pandas matplotlib nilearn niworkflows pydicom pybids 
+
+# Install oscprep
+COPY oscprep /opt/oscprep/oscprep
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir \
+	smriprep \
+	fmriprep \
+	sdcflows \
+	jupyterlab \
+	numpy \
+	pydicom \
+	pybids \
+	nibabel \
+	nilearn \
+	niworkflows \
+	pandas \
+	matplotlib
 
 # Installing freesurfer
 COPY docker/files/freesurfer7.2-exclude.txt /usr/local/etc/freesurfer7.2-exclude.txt
