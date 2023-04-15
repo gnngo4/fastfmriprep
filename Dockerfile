@@ -1,44 +1,20 @@
-# Ubuntu 20.04 LTS
-FROM ubuntu:focal-20210416
+FROM ubuntu:jammy-20230308
 
 ENV DEBIAN_FRONTEND="noninteractive"
-# Environment
-RUN apt-get update && \
+
+#RUN apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update -y && apt upgrade -y && \
+RUN apt-get update -y && apt upgrade -y && \
     apt-get install -y --no-install-recommends \
-                    python3.10 \
-                    python3-pip \
-                    apt-utils \
-                    autoconf \
-                    build-essential \
-                    bzip2 \
-                    ca-certificates \
-                    curl \
-                    git \
-                    libtool \
-                    lsb-release \
-                    netbase \
-                    pkg-config \
-                    unzip \
-                    xvfb && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Install oscprep
-COPY oscprep /opt/oscprep/oscprep
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir \
-	smriprep \
-	fmriprep \
-	sdcflows \
-	jupyterlab \
-	numpy \
-	pydicom \
-	pybids \
-	nibabel \
-	nilearn \
-	niworkflows \
-	pandas \
-	matplotlib
-
+        ca-certificates \
+        wget \
+        curl \
+        unzip \
+        tree \
+        libxt-dev && \
+    apt-get clean && \
+    apt-get autoremove && \
+    rm -rf /var/lib/apt/lists/*
+    
 # Installing freesurfer
 COPY docker/files/freesurfer7.2-exclude.txt /usr/local/etc/freesurfer7.2-exclude.txt
 RUN curl -sSL https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.2.0/freesurfer-linux-ubuntu18_amd64-7.2.0.tar.gz \
@@ -66,6 +42,9 @@ ENV PERL5LIB="$MINC_LIB_DIR/perl5/5.8.5" \
 COPY docker/files/freesurfer_license.txt /opt/freesurfer/license.txt
 
 # mri_synthstrip 1.3
+RUN apt-get update -y && apt upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        build-essential python3-dev
 RUN fspython -m pip install torch==1.10.2
 RUN fspython -m pip install surfa==0.3.3
 RUN mkdir -p /opt/synthstrip
@@ -76,26 +55,25 @@ COPY --from=freesurfer/synthstrip:1.3 /freesurfer/models/synthstrip.*.pt /opt/fr
 COPY docker/files/recon-all.edit /opt/freesurfer/bin/recon-all
 
 # FSL 6.0.5.1
-RUN apt-get update -qq \
-    && apt-get install -y -q --no-install-recommends \
-           bc \
-           dc \
-           file \
-           libfontconfig1 \
-           libfreetype6 \
-           libgl1-mesa-dev \
-           libgl1-mesa-dri \
-           libglu1-mesa-dev \
-           libgomp1 \
-           libice6 \
-           libxcursor1 \
-           libxft2 \
-           libxinerama1 \
-           libxrandr2 \
-           libxrender1 \
-           libxt6 \
-           sudo \
-           wget \
+RUN apt-get update -y && apt upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        bc \
+        dc \
+        file \
+        libfontconfig1 \
+        libfreetype6 \
+        libgl1-mesa-dev \
+        libgl1-mesa-dri \
+        libglu1-mesa-dev \
+        libgomp1 \
+        libice6 \
+        libxcursor1 \
+        libxft2 \
+        libxinerama1 \
+        libxrandr2 \
+        libxrender1 \
+        libxt6 \
+        libquadmath0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && echo "Downloading FSL ..." \
@@ -124,10 +102,10 @@ RUN apt-get update -qq \
     --exclude "fsl/bin/FSLeyes" \
     && find /opt/fsl-6.0.5.1/bin -type f -not \( \
         -name "applywarp" -or \
-        -name "convertwarp" -or \
         -name "bet" -or \
         -name "bet2" -or \
         -name "convert_xfm" -or \
+        -name "convertwarp" -or \
         -name "fast" -or \
         -name "flirt" -or \
         -name "fsl_regfilt" -or \
@@ -135,19 +113,14 @@ RUN apt-get update -qq \
         -name "fslinfo" -or \
         -name "fslmaths" -or \
         -name "fslmerge" -or \
-    	-name "fsl_prepare_fieldmap" -or \
         -name "fslroi" -or \
         -name "fslsplit" -or \
         -name "fslstats" -or \
-	-name "fslval" -or \
-        -name "fugue" -or \
         -name "imtest" -or \
         -name "mcflirt" -or \
         -name "melodic" -or \
-        -name "prelude" -or \
         -name "remove_ext" -or \
         -name "susan" -or \
-        -name "topup" -or \
         -name "zeropad" \) -delete \
     && find /opt/fsl-6.0.5.1/data/standard -type f -not -name "MNI152_T1_2mm_brain.nii.gz" -delete
 ENV FSLDIR="/opt/fsl-6.0.5.1" \
@@ -173,60 +146,26 @@ ENV C3DPATH="/opt/convert3d-1.0.0" \
     PATH="/opt/convert3d-1.0.0/bin:$PATH"
 
 # AFNI latest (neurodocker build)
-RUN apt-get update -qq \
-    && apt-get install -y -q --no-install-recommends \
-           apt-utils \
-           ed \
-           gsl-bin \
-           libglib2.0-0 \
-           libglu1-mesa-dev \
-           libglw1-mesa \
-           libgomp1 \
-           libjpeg62 \
-           libxm4 \
-           netpbm \
-           tcsh \
-           xfonts-base \
-           xvfb \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -sSL --retry 5 -o /tmp/multiarch.deb http://archive.ubuntu.com/ubuntu/pool/main/g/glibc/multiarch-support_2.27-3ubuntu1.5_amd64.deb \
-    && dpkg -i /tmp/multiarch.deb \
-    && rm /tmp/multiarch.deb \
-    && curl -sSL --retry 5 -o /tmp/libxp6.deb http://mirrors.kernel.org/debian/pool/main/libx/libxp/libxp6_1.0.2-2_amd64.deb \
-    && dpkg -i /tmp/libxp6.deb \
-    && rm /tmp/libxp6.deb \
-    && curl -sSL --retry 5 -o /tmp/libpng.deb http://snapshot.debian.org/archive/debian-security/20160113T213056Z/pool/updates/main/libp/libpng/libpng12-0_1.2.49-1%2Bdeb7u2_amd64.deb \
-    && dpkg -i /tmp/libpng.deb \
-    && rm /tmp/libpng.deb \
-    && apt-get install -f \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && gsl2_path="$(find / -name 'libgsl.so.19' || printf '')" \
-    && if [ -n "$gsl2_path" ]; then \
-         ln -sfv "$gsl2_path" "$(dirname $gsl2_path)/libgsl.so.0"; \
-    fi \
-    && ldconfig \
-    && echo "Downloading AFNI ..." \
-    && mkdir -p /opt/afni-latest \
-    && curl -fsSL --retry 5 https://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz \
-    | tar -xz -C /opt/afni-latest --strip-components 1 \
-    --exclude "linux_openmp_64/*.gz" \
-    --exclude "linux_openmp_64/funstuff" \
-    --exclude "linux_openmp_64/shiny" \
-    --exclude "linux_openmp_64/afnipy" \
-    --exclude "linux_openmp_64/lib/RetroTS" \
-    --exclude "linux_openmp_64/meica.libs" \
-    # Keep only what we use
-    && find /opt/afni-latest -type f -not \( \
-        -name "3dTshift" -or \
-        -name "3dUnifize" -or \
-        -name "3dAutomask" -or \
-        -name "3dvolreg" \) -delete
-
 ENV PATH="/opt/afni-latest:$PATH" \
-    AFNI_IMSAVE_WARNINGS="NO" \
     AFNI_PLUGINPATH="/opt/afni-latest"
+RUN apt-get update -y && apt upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        tcsh xfonts-base libssl-dev \
+        gsl-bin netpbm gnome-tweaks \
+        libjpeg62 xvfb xterm \
+        gedit evince eog \
+        libglu1-mesa-dev libglw1-mesa \
+        libxm4 build-essential \
+        libcurl4-openssl-dev libxml2-dev \
+        libgfortran-11-dev libgomp1 \
+        gnome-terminal nautilus \
+        firefox xfonts-100dpi \
+        r-base-dev cmake \
+        libgdal-dev libopenblas-dev \
+        libnode-dev libudunits2-dev && \
+    ln -s /usr/lib/x86_64-linux-gnu/libgsl.so.27 /usr/lib/x86_64-linux-gnu/libgsl.so.19 && \
+    curl -O https://afni.nimh.nih.gov/pub/dist/bin/misc/@update.afni.binaries && \
+    tcsh @update.afni.binaries -package linux_ubuntu_16_64 -do_extras -bindir /opt/afni-latest
 
 # Installing ANTs 2.3.3 (NeuroDocker build)
 # Note: the URL says 2.3.4 but it is actually 2.3.3
@@ -250,6 +189,19 @@ ENV PATH="/opt/workbench/bin_linux64:$PATH" \
 
 RUN ldconfig
 
-COPY oscprep /opt/oscprep/oscprep
+# Python 3.10 and pipenv
+RUN apt-get update -y && apt upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        python3.10 \
+        python3-pip && \
+    pip install pipenv
+
+WORKDIR /opt/oscprep
+COPY ["Pipfile.lock", "/opt/oscprep"]
+COPY ["Pipfile", "/opt/oscprep"]
+ADD ["oscprep", "/opt/oscprep/oscprep"]
+RUN ["pipenv", "install", "--deploy", "--system", "--ignore-pipfile"]
+
+WORKDIR /opt
 
 ENTRYPOINT ["python3","/opt/oscprep/oscprep/cli/run.py"]
