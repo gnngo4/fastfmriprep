@@ -1,16 +1,13 @@
-from os import getenv
-
 from nipype.algorithms import confounds as nac
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
 from fmriprep.interfaces.confounds import (
     FilterDropped,
-    FMRISummary,
     GatherConfounds,
-    ICAConfounds,
     RenameACompCor,
 )
+
 
 def init_bold_confs_wf(
     mem_gb,
@@ -105,27 +102,49 @@ def init_bold_confs_wf(
     crown_mask
         Mask of brain edge voxels
     """
-    from niworkflows.engine.workflows import LiterateWorkflow as Workflow
-    from niworkflows.interfaces.confounds import ExpandModel, SpikeRegressors
-    from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
+    from niworkflows.engine.workflows import (
+        LiterateWorkflow as Workflow,
+    )
+    from niworkflows.interfaces.confounds import (
+        ExpandModel,
+        SpikeRegressors,
+    )
+    from niworkflows.interfaces.fixes import (
+        FixHeaderApplyTransforms as ApplyTransforms,
+    )
     from niworkflows.interfaces.images import SignalExtraction
-    from niworkflows.interfaces.morphology import BinaryDilation, BinarySubtraction
+    from niworkflows.interfaces.morphology import (
+        BinaryDilation,
+        BinarySubtraction,
+    )
     from niworkflows.interfaces.nibabel import ApplyMask, Binarize
-    from niworkflows.interfaces.patches import RobustACompCor as ACompCor
-    from niworkflows.interfaces.patches import RobustTCompCor as TCompCor
+    from niworkflows.interfaces.patches import (
+        RobustACompCor as ACompCor,
+    )
+    from niworkflows.interfaces.patches import (
+        RobustTCompCor as TCompCor,
+    )
     from niworkflows.interfaces.plotting import (
         CompCorVariancePlot,
         ConfoundsCorrelationPlot,
     )
     from niworkflows.interfaces.reportlets.masks import ROIsPlot
-    from niworkflows.interfaces.utility import TSV2JSON, AddTSVHeader, DictMerge
+    from niworkflows.interfaces.utility import (
+        TSV2JSON,
+        AddTSVHeader,
+        DictMerge,
+    )
 
     from fmriprep.interfaces.confounds import aCompCorMasks
 
     gm_desc = (
-        "dilating a GM mask extracted from the FreeSurfer's *aseg* segmentation"
+        "dilating a GM mask extracted from the FreeSurfer's *aseg*"
+        " segmentation"
         if freesurfer
-        else "thresholding the corresponding partial volume map at 0.05"
+        else (
+            "thresholding the corresponding partial volume map at"
+            " 0.05"
+        )
     )
 
     workflow = Workflow(name=name)
@@ -198,7 +217,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
                 "acompcor_masks",
                 "tcompcor_mask",
                 "crown_mask",
-                "rois_plot"
+                "rois_plot",
             ]
         ),
         name="outputnode",
@@ -209,7 +228,9 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         ApplyTransforms(interpolation="MultiLabel"),
         name="t1w_mask_tfm",
     )
-    union_mask = pe.Node(niu.Function(function=_binary_union), name="union_mask")
+    union_mask = pe.Node(
+        niu.Function(function=_binary_union), name="union_mask"
+    )
 
     # Create the crown mask
     dilated_mask = pe.Node(BinaryDilation(), name="dilated_mask")
@@ -217,16 +238,24 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
 
     # DVARS
     dvars = pe.Node(
-        nac.ComputeDVARS(save_nstd=True, save_std=True, remove_zerovariance=True),
+        nac.ComputeDVARS(
+            save_nstd=True, save_std=True, remove_zerovariance=True
+        ),
         name="dvars",
         mem_gb=mem_gb,
     )
 
     # Frame displacement
-    fdisp = pe.Node(nac.FramewiseDisplacement(parameter_source="SPM"), name="fdisp", mem_gb=mem_gb)
+    fdisp = pe.Node(
+        nac.FramewiseDisplacement(parameter_source="SPM"),
+        name="fdisp",
+        mem_gb=mem_gb,
+    )
 
     # Generate aCompCor probseg maps
-    acc_masks = pe.Node(aCompCorMasks(is_aseg=freesurfer), name="acc_masks")
+    acc_masks = pe.Node(
+        aCompCorMasks(is_aseg=freesurfer), name="acc_masks"
+    )
 
     # Resample probseg maps in BOLD space via T1w-to-BOLD transform
     acc_msk_tfm = pe.MapNode(
@@ -235,8 +264,14 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         name="acc_msk_tfm",
         mem_gb=0.1,
     )
-    acc_msk_brain = pe.MapNode(ApplyMask(), name="acc_msk_brain", iterfield=["in_file"])
-    acc_msk_bin = pe.MapNode(Binarize(thresh_low=0.99), name="acc_msk_bin", iterfield=["in_file"])
+    acc_msk_brain = pe.MapNode(
+        ApplyMask(), name="acc_msk_brain", iterfield=["in_file"]
+    )
+    acc_msk_bin = pe.MapNode(
+        Binarize(thresh_low=0.99),
+        name="acc_msk_bin",
+        iterfield=["in_file"],
+    )
     acompcor = pe.Node(
         ACompCor(
             components_file="acompcor.tsv",
@@ -294,10 +329,14 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
     if "RepetitionTime" in metadata:
         tcompcor.inputs.repetition_time = metadata["RepetitionTime"]
         acompcor.inputs.repetition_time = metadata["RepetitionTime"]
-        crowncompcor.inputs.repetition_time = metadata["RepetitionTime"]
+        crowncompcor.inputs.repetition_time = metadata[
+            "RepetitionTime"
+        ]
 
     # Split aCompCor results into a_comp_cor, c_comp_cor, w_comp_cor
-    rename_acompcor = pe.Node(RenameACompCor(), name="rename_acompcor")
+    rename_acompcor = pe.Node(
+        RenameACompCor(), name="rename_acompcor"
+    )
 
     # Global and segment regressors
     signals_class_labels = [
@@ -308,10 +347,14 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         "tcompcor",
     ]
     merge_rois = pe.Node(
-        niu.Merge(3, ravel_inputs=True), name="merge_rois", run_without_submitting=True
+        niu.Merge(3, ravel_inputs=True),
+        name="merge_rois",
+        run_without_submitting=True,
     )
     signals = pe.Node(
-        SignalExtraction(class_labels=signals_class_labels), name="signals", mem_gb=mem_gb
+        SignalExtraction(class_labels=signals_class_labels),
+        name="signals",
+        mem_gb=mem_gb,
     )
 
     # Arrange confounds
@@ -328,7 +371,16 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         run_without_submitting=True,
     )
     add_motion_headers = pe.Node(
-        AddTSVHeader(columns=["trans_x", "trans_y", "trans_z", "rot_x", "rot_y", "rot_z"]),
+        AddTSVHeader(
+            columns=[
+                "trans_x",
+                "trans_y",
+                "trans_z",
+                "rot_x",
+                "rot_y",
+                "rot_z",
+            ]
+        ),
         name="add_motion_headers",
         mem_gb=0.01,
         run_without_submitting=True,
@@ -339,11 +391,20 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         mem_gb=0.01,
         run_without_submitting=True,
     )
-    concat = pe.Node(GatherConfounds(), name="concat", mem_gb=0.01, run_without_submitting=True)
+    concat = pe.Node(
+        GatherConfounds(),
+        name="concat",
+        mem_gb=0.01,
+        run_without_submitting=True,
+    )
 
     # CompCor metadata
-    tcc_metadata_filter = pe.Node(FilterDropped(), name="tcc_metadata_filter")
-    acc_metadata_filter = pe.Node(FilterDropped(), name="acc_metadata_filter")
+    tcc_metadata_filter = pe.Node(
+        FilterDropped(), name="tcc_metadata_filter"
+    )
+    acc_metadata_filter = pe.Node(
+        FilterDropped(), name="acc_metadata_filter"
+    )
     tcc_metadata_fmt = pe.Node(
         TSV2JSON(
             index_column="component",
@@ -374,28 +435,41 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
     )
 
     mrg_conf_metadata = pe.Node(
-        niu.Merge(3), name="merge_confound_metadata", run_without_submitting=True
+        niu.Merge(3),
+        name="merge_confound_metadata",
+        run_without_submitting=True,
     )
-    mrg_conf_metadata.inputs.in3 = {label: {"Method": "Mean"} for label in signals_class_labels}
+    mrg_conf_metadata.inputs.in3 = {
+        label: {"Method": "Mean"} for label in signals_class_labels
+    }
     mrg_conf_metadata2 = pe.Node(
-        DictMerge(), name="merge_confound_metadata2", run_without_submitting=True
+        DictMerge(),
+        name="merge_confound_metadata2",
+        run_without_submitting=True,
     )
 
     # Expand model to include derivatives and quadratics
     model_expand = pe.Node(
-        ExpandModel(model_formula="(dd1(rps + wm + csf + gsr))^^2 + others"),
+        ExpandModel(
+            model_formula="(dd1(rps + wm + csf + gsr))^^2 + others"
+        ),
         name="model_expansion",
     )
 
     # Add spike regressors
     spike_regress = pe.Node(
-        SpikeRegressors(fd_thresh=regressors_fd_th, dvars_thresh=regressors_dvars_th),
+        SpikeRegressors(
+            fd_thresh=regressors_fd_th,
+            dvars_thresh=regressors_dvars_th,
+        ),
         name="spike_regressors",
     )
 
     # Generate reportlet (ROIs)
     mrg_compcor = pe.Node(
-        niu.Merge(3, ravel_inputs=True), name="mrg_compcor", run_without_submitting=True
+        niu.Merge(3, ravel_inputs=True),
+        name="mrg_compcor",
+        run_without_submitting=True,
     )
     rois_plot = pe.Node(
         ROIsPlot(colors=["b", "magenta", "g"], generate_report=True),
@@ -403,18 +477,20 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         mem_gb=mem_gb,
     )
 
-    '''
+    """
     ds_report_bold_rois = pe.Node(
         DerivativesDataSink(desc="rois", datatype="figures", dismiss_entities=("echo",)),
         name="ds_report_bold_rois",
         run_without_submitting=True,
         mem_gb=8,
     )
-    '''
+    """
 
     # Generate reportlet (CompCor)
     mrg_cc_metadata = pe.Node(
-        niu.Merge(2), name="merge_compcor_metadata", run_without_submitting=True
+        niu.Merge(2),
+        name="merge_compcor_metadata",
+        run_without_submitting=True,
     )
     compcor_plot = pe.Node(
         CompCorVariancePlot(
@@ -424,28 +500,30 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         name="compcor_plot",
     )
 
-    '''
+    """
     ds_report_compcor = pe.Node(
         DerivativesDataSink(desc="compcorvar", datatype="figures", dismiss_entities=("echo",)),
         name="ds_report_compcor",
         run_without_submitting=True,
         mem_gb=8,
     )
-    '''
+    """
 
     # Generate reportlet (Confound correlation)
     conf_corr_plot = pe.Node(
-        ConfoundsCorrelationPlot(reference_column="global_signal", max_dim=20),
+        ConfoundsCorrelationPlot(
+            reference_column="global_signal", max_dim=20
+        ),
         name="conf_corr_plot",
     )
-    '''
+    """
     ds_report_conf_corr = pe.Node(
         DerivativesDataSink(desc="confoundcorr", datatype="figures", dismiss_entities=("echo",)),
         name="ds_report_conf_corr",
         run_without_submitting=True,
         mem_gb=8,
     )
-    '''
+    """
 
     def _last(inlist):
         return inlist[-1]
@@ -456,7 +534,9 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         return [
             col
             for col in pd.read_table(table, nrows=2).columns
-            if not col.startswith(("a_comp_cor_", "t_comp_cor_", "std_dvars"))
+            if not col.startswith(
+                ("a_comp_cor_", "t_comp_cor_", "std_dvars")
+            )
         ]
 
     # fmt:off
@@ -563,6 +643,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
 
     return workflow
 
+
 def _binary_union(mask1, mask2):
     """Generate the union of two masks."""
     from pathlib import Path
@@ -578,6 +659,7 @@ def _binary_union(mask1, mask2):
     out_name = Path("mask_union.nii.gz").absolute()
     out.to_filename(out_name)
     return str(out_name)
+
 
 def _get_zooms(in_file):
     import nibabel as nb
