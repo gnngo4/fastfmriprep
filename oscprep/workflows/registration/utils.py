@@ -29,13 +29,9 @@ def init_itk_to_fsl_affine_wf(name="itk_to_fsl_affine_wf"):
         name="inputnode",
     )
 
-    outputnode = pe.Node(
-        niu.IdentityInterface(["fsl_affine"]), name="outputnode"
-    )
+    outputnode = pe.Node(niu.IdentityInterface(["fsl_affine"]), name="outputnode")
 
-    itk_to_fsl = pe.Node(
-        C3dAffineTool(ras2fsl=True), name="itk_to_fsl"
-    )
+    itk_to_fsl = pe.Node(C3dAffineTool(ras2fsl=True), name="itk_to_fsl")
     itk_to_fsl.inputs.fsl_transform = "fsl_affine.mat"
 
     # Connect
@@ -61,9 +57,7 @@ def init_itk_to_fsl_affine_wf(name="itk_to_fsl_affine_wf"):
     return workflow
 
 
-def init_fsl_merge_transforms_wf(
-    use_fmaps, name="fsl_merge_transforms_wf"
-):
+def init_fsl_merge_transforms_wf(use_fmaps, name="fsl_merge_transforms_wf"):
     """
     Combine the following transformations:
     (1) slab SDC warp
@@ -109,9 +103,7 @@ def init_fsl_merge_transforms_wf(
     )
 
     outputnode = pe.Node(
-        niu.IdentityInterface(
-            ["slab2anat_warp", "reference_resampled"]
-        ),
+        niu.IdentityInterface(["slab2anat_warp", "reference_resampled"]),
         name="outputnode",
     )
 
@@ -131,9 +123,7 @@ def init_fsl_merge_transforms_wf(
         name="slab2anat_aff",
     )
 
-    gen_ref = pe.Node(
-        GenerateSamplingReference(), name="generate_reference"
-    )
+    gen_ref = pe.Node(GenerateSamplingReference(), name="generate_reference")
 
     slab2anat_warp = pe.Node(fsl.ConvertWarp(), name="slab2anat_warp")
 

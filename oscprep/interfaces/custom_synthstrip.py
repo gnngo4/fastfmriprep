@@ -17,9 +17,7 @@ class SynthStripInputSpec(CommandLineInputSpec):
         position=0,
         desc="input image",
     )
-    out_file = File(
-        argstr="-o %s", position=1, desc="output skull-stripped image"
-    )
+    out_file = File(argstr="-o %s", position=1, desc="output skull-stripped image")
     mask_file = File(
         argstr="-m %s",
         position=2,
@@ -36,10 +34,7 @@ class SynthStripInputSpec(CommandLineInputSpec):
 class SynthStripOutputSpec(TraitedSpec):
     out_file = File(desc="output skull-stripped image (if generated)")
     mask_file = File(
-        desc=(
-            "output binary mask of skull-stripped image (if"
-            " generated)"
-        )
+        desc=("output binary mask of skull-stripped image (if" " generated)")
     )
 
 

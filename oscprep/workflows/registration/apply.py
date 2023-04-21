@@ -86,9 +86,7 @@ def init_apply_fmap_to_bold_wf(
             FSLPrepareFieldmap,
         )
 
-        assert (
-            fmap_metadata is not None
-        ), "`fmap_metadata` must be specified."
+        assert fmap_metadata is not None, "`fmap_metadata` must be specified."
         inputnode.inputs.fmap_metadata = fmap_metadata
         # Mask fmap magnitude image
         mask_fmap_mag = pe.Node(fsl.ApplyMask(), name="mask_fmap_mag")
@@ -168,9 +166,7 @@ def init_apply_fmap_to_bold_wf(
     return workflow
 
 
-def init_apply_bold_to_anat_wf(
-    slab_bold_quick=False, name="apply_bold_to_t1_wf"
-):
+def init_apply_bold_to_anat_wf(slab_bold_quick=False, name="apply_bold_to_t1_wf"):
     from niworkflows.engine.workflows import (
         LiterateWorkflow as Workflow,
     )
@@ -198,9 +194,7 @@ def init_apply_bold_to_anat_wf(
     )
 
     outputnode = pe.Node(
-        niu.IdentityInterface(
-            fields=["t1_space_bold", "t1_space_boldref"]
-        ),
+        niu.IdentityInterface(fields=["t1_space_bold", "t1_space_boldref"]),
         name="outputnode",
     )
 
@@ -209,9 +203,7 @@ def init_apply_bold_to_anat_wf(
         name="apply_bold_to_t1",
     )
 
-    apply_bold_ref_to_t1 = pe.Node(
-        fsl.ApplyWarp(), name="apply_bold_ref_to_t1"
-    )
+    apply_bold_ref_to_t1 = pe.Node(fsl.ApplyWarp(), name="apply_bold_ref_to_t1")
 
     workflow.connect(
         [
@@ -269,8 +261,7 @@ def _get_delta_te(metadata_dict):
         assert _key in metadata_dict, f"{_key} not found in metadata."
 
     delta_te = (
-        float(metadata_dict["EchoTime2"])
-        - float(metadata_dict["EchoTime1"])
+        float(metadata_dict["EchoTime2"]) - float(metadata_dict["EchoTime1"])
     ) * 1000
 
     return delta_te

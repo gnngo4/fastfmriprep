@@ -17,15 +17,9 @@ class C3dAffineToolInputSpec(CommandLineInputSpec):
         position=0,
         desc="reference image",
     )
-    source_file = File(
-        argstr="-src %s", position=1, desc="source image"
-    )
-    itk_transform = File(
-        argstr="-itk %s", position=2, desc="itk transform"
-    )
-    fsl_transform = File(
-        argstr="-o %s", position=4, desc="fsl transform"
-    )
+    source_file = File(argstr="-src %s", position=1, desc="source image")
+    itk_transform = File(argstr="-itk %s", position=2, desc="itk transform")
+    fsl_transform = File(argstr="-o %s", position=4, desc="fsl transform")
     ras2fsl = traits.Bool(
         mandatory=False,
         argstr="-ras2fsl",
@@ -45,9 +39,7 @@ class C3dAffineTool(CommandLine):
 
     def _list_outputs(self):
         _outputs = {
-            "fsl_transform": os.path.abspath(
-                self.inputs.fsl_transform
-            ),
+            "fsl_transform": os.path.abspath(self.inputs.fsl_transform),
         }
 
         return _outputs

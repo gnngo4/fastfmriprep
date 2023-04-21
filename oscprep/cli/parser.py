@@ -22,13 +22,9 @@ def setup_parser():
         help="session ID in the BIDS directory.",
     )
 
-    parser.add_argument(
-        "--bids_dir", required=True, type=str, help="BIDS directory."
-    )
+    parser.add_argument("--bids_dir", required=True, type=str, help="BIDS directory.")
 
-    parser.add_argument(
-        "--out_dir", required=True, type=str, help="output directory."
-    )
+    parser.add_argument("--out_dir", required=True, type=str, help="output directory.")
 
     parser.add_argument(
         "--scratch_dir",
@@ -51,19 +47,13 @@ def setup_parser():
     parser.add_argument(
         "--info_flag",
         action="store_true",
-        help=(
-            "Print paths to all inputs and expected output"
-            " directories."
-        ),
+        help=("Print paths to all inputs and expected output" " directories."),
     )
 
     parser.add_argument(
         "--anat_flag",
         action="store_true",
-        help=(
-            "[workflows] Enables only anatomical preprocessing"
-            " workflow."
-        ),
+        help=("[workflows] Enables only anatomical preprocessing" " workflow."),
     )
 
     parser.add_argument("--select_task", default=None, type=str)
@@ -76,10 +66,7 @@ def setup_parser():
     parser.add_argument(
         "--slab_bold_quick",
         action="store_true",
-        help=(
-            "[debug] Processes all slabs with only the first 10"
-            " volumes."
-        ),
+        help=("[debug] Processes all slabs with only the first 10" " volumes."),
     )
 
     # Other
@@ -101,8 +88,7 @@ def setup_parser():
         default=1.0,
         type=float,
         help=(
-            "[mp2rage] synthstrip upsample resolution (used to dilate"
-            " brainmasking)."
+            "[mp2rage] synthstrip upsample resolution (used to dilate" " brainmasking)."
         ),
     )
 

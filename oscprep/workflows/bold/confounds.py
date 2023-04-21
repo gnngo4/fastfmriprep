@@ -57,7 +57,7 @@ def init_bold_confs_wf(
     mem_gb : :obj:`float`
         Size of BOLD file in GB - please note that this size
         should be calculated after resamplings that may extend
-        the FoV
+        the field of view.
     metadata : :obj:`dict`
         BIDS metadata for BOLD file
     name : :obj:`str`
@@ -138,13 +138,9 @@ def init_bold_confs_wf(
     from fmriprep.interfaces.confounds import aCompCorMasks
 
     gm_desc = (
-        "dilating a GM mask extracted from the FreeSurfer's *aseg*"
-        " segmentation"
+        "dilating a GM mask extracted from the FreeSurfer's *aseg*" " segmentation"
         if freesurfer
-        else (
-            "thresholding the corresponding partial volume map at"
-            " 0.05"
-        )
+        else ("thresholding the corresponding partial volume map at" " 0.05")
     )
 
     workflow = Workflow(name=name)
@@ -228,9 +224,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         ApplyTransforms(interpolation="MultiLabel"),
         name="t1w_mask_tfm",
     )
-    union_mask = pe.Node(
-        niu.Function(function=_binary_union), name="union_mask"
-    )
+    union_mask = pe.Node(niu.Function(function=_binary_union), name="union_mask")
 
     # Create the crown mask
     dilated_mask = pe.Node(BinaryDilation(), name="dilated_mask")
@@ -238,9 +232,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
 
     # DVARS
     dvars = pe.Node(
-        nac.ComputeDVARS(
-            save_nstd=True, save_std=True, remove_zerovariance=True
-        ),
+        nac.ComputeDVARS(save_nstd=True, save_std=True, remove_zerovariance=True),
         name="dvars",
         mem_gb=mem_gb,
     )
@@ -253,9 +245,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
     )
 
     # Generate aCompCor probseg maps
-    acc_masks = pe.Node(
-        aCompCorMasks(is_aseg=freesurfer), name="acc_masks"
-    )
+    acc_masks = pe.Node(aCompCorMasks(is_aseg=freesurfer), name="acc_masks")
 
     # Resample probseg maps in BOLD space via T1w-to-BOLD transform
     acc_msk_tfm = pe.MapNode(
@@ -264,9 +254,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         name="acc_msk_tfm",
         mem_gb=0.1,
     )
-    acc_msk_brain = pe.MapNode(
-        ApplyMask(), name="acc_msk_brain", iterfield=["in_file"]
-    )
+    acc_msk_brain = pe.MapNode(ApplyMask(), name="acc_msk_brain", iterfield=["in_file"])
     acc_msk_bin = pe.MapNode(
         Binarize(thresh_low=0.99),
         name="acc_msk_bin",
@@ -329,14 +317,10 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
     if "RepetitionTime" in metadata:
         tcompcor.inputs.repetition_time = metadata["RepetitionTime"]
         acompcor.inputs.repetition_time = metadata["RepetitionTime"]
-        crowncompcor.inputs.repetition_time = metadata[
-            "RepetitionTime"
-        ]
+        crowncompcor.inputs.repetition_time = metadata["RepetitionTime"]
 
     # Split aCompCor results into a_comp_cor, c_comp_cor, w_comp_cor
-    rename_acompcor = pe.Node(
-        RenameACompCor(), name="rename_acompcor"
-    )
+    rename_acompcor = pe.Node(RenameACompCor(), name="rename_acompcor")
 
     # Global and segment regressors
     signals_class_labels = [
@@ -399,12 +383,8 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
     )
 
     # CompCor metadata
-    tcc_metadata_filter = pe.Node(
-        FilterDropped(), name="tcc_metadata_filter"
-    )
-    acc_metadata_filter = pe.Node(
-        FilterDropped(), name="acc_metadata_filter"
-    )
+    tcc_metadata_filter = pe.Node(FilterDropped(), name="tcc_metadata_filter")
+    acc_metadata_filter = pe.Node(FilterDropped(), name="acc_metadata_filter")
     tcc_metadata_fmt = pe.Node(
         TSV2JSON(
             index_column="component",
@@ -450,9 +430,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
 
     # Expand model to include derivatives and quadratics
     model_expand = pe.Node(
-        ExpandModel(
-            model_formula="(dd1(rps + wm + csf + gsr))^^2 + others"
-        ),
+        ExpandModel(model_formula="(dd1(rps + wm + csf + gsr))^^2 + others"),
         name="model_expansion",
     )
 
@@ -511,9 +489,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
 
     # Generate reportlet (Confound correlation)
     conf_corr_plot = pe.Node(
-        ConfoundsCorrelationPlot(
-            reference_column="global_signal", max_dim=20
-        ),
+        ConfoundsCorrelationPlot(reference_column="global_signal", max_dim=20),
         name="conf_corr_plot",
     )
     """
@@ -534,9 +510,7 @@ the edge of the brain, as proposed by [@patriat_improved_2017].
         return [
             col
             for col in pd.read_table(table, nrows=2).columns
-            if not col.startswith(
-                ("a_comp_cor_", "t_comp_cor_", "std_dvars")
-            )
+            if not col.startswith(("a_comp_cor_", "t_comp_cor_", "std_dvars"))
         ]
 
     # fmt:off

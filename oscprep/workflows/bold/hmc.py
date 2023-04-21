@@ -28,21 +28,15 @@ def init_bold_hmc_wf(low_pass_threshold=0, name="bold_hmc_wf"):
     )
 
     outputnode = pe.Node(
-        niu.IdentityInterface(
-            fields=["fsl_affines", "movpar_file", "rmsd_file"]
-        ),
+        niu.IdentityInterface(fields=["fsl_affines", "movpar_file", "rmsd_file"]),
         name="outputnode",
     )
 
-    boldbuffer = pe.Node(
-        niu.IdentityInterface(fields=["bold_file"]), name="boldbuffer"
-    )
+    boldbuffer = pe.Node(niu.IdentityInterface(fields=["bold_file"]), name="boldbuffer")
 
     if low_pass_threshold > 0:
         # Low-pass-filter bold data
-        lp_filter_bold = pe.Node(
-            LowPassFilterBold(), name="lp_filter_bold"
-        )
+        lp_filter_bold = pe.Node(LowPassFilterBold(), name="lp_filter_bold")
         lp_filter_bold.inputs.low_pass_threshold = low_pass_threshold
         workflow.connect(
             [
@@ -69,9 +63,7 @@ def init_bold_hmc_wf(low_pass_threshold=0, name="bold_hmc_wf"):
             ]
         )
     else:
-        workflow.connect(
-            [(inputnode, boldbuffer, [("bold_file", "bold_file")])]
-        )
+        workflow.connect([(inputnode, boldbuffer, [("bold_file", "bold_file")])])
 
     # Head-motion correction
     mcflirt = pe.Node(

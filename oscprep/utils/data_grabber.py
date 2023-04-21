@@ -10,9 +10,7 @@ class bids_reader:
         Return a list of subjects in the bids folder
         """
 
-        subject_list = [
-            i for i in os.listdir(self.bids_dir) if i[:4] == "sub-"
-        ]
+        subject_list = [i for i in os.listdir(self.bids_dir) if i[:4] == "sub-"]
         subject_list.sort()
 
         return subject_list
@@ -25,9 +23,7 @@ class bids_reader:
         if subj_id[:4] != "sub-":
             subj_id = f"sub-{subj_id}"
         subj_dir = f"{self.bids_dir}/{subj_id}"
-        assert os.path.isdir(
-            subj_dir
-        ), f"Directory [{subj_dir}] does not exist."
+        assert os.path.isdir(subj_dir), f"Directory [{subj_dir}] does not exist."
 
         session_list = [i for i in os.listdir(f"{subj_dir}")]
         session_list.sort()
@@ -49,10 +45,7 @@ class bids_reader:
         """
 
         # add 'task-' in front of elements in `ignore_tasks`
-        ignore_tasks = [
-            f"task-{i}" if "task-" != i[:5] else i
-            for i in ignore_tasks
-        ]
+        ignore_tasks = [f"task-{i}" if "task-" != i[:5] else i for i in ignore_tasks]
 
         if subj_id[:4] != "sub-":
             subj_id = f"sub-{subj_id}"
@@ -61,9 +54,7 @@ class bids_reader:
         sess_dir = f"{self.bids_dir}/{subj_id}/{sess_id}"
         func_dir = f"{sess_dir}/func"
         for _dir in [sess_dir, func_dir]:
-            assert os.path.isdir(
-                f"{_dir}"
-            ), f"Directory [{_dir}] does not exist."
+            assert os.path.isdir(f"{_dir}"), f"Directory [{_dir}] does not exist."
 
         func_list = []
         # If `specific_task` is set, ONLY grab the labelled task name
@@ -71,36 +62,24 @@ class bids_reader:
             for i in os.listdir(func_dir):
                 if "task-" not in i:
                     continue
-                task_name = (
-                    f"task-{i.split('task-')[1].split('_')[0]}"
-                )
-                if (
-                    i[-len(suffix) :] == suffix
-                    and task_name in f"task-{specific_task}"
-                ):
+                task_name = f"task-{i.split('task-')[1].split('_')[0]}"
+                if i[-len(suffix) :] == suffix and task_name in f"task-{specific_task}":
                     func_list.append(i)
         # Else: include all tasks that are not included in `ignore_tasks`
         else:
             for i in os.listdir(func_dir):
                 if "task-" not in i:
                     continue
-                task_name = (
-                    f"task-{i.split('task-')[1].split('_')[0]}"
-                )
-                if (
-                    i[-len(suffix) :] == suffix
-                    and task_name not in ignore_tasks
-                ):
+                task_name = f"task-{i.split('task-')[1].split('_')[0]}"
+                if i[-len(suffix) :] == suffix and task_name not in ignore_tasks:
                     func_list.append(i)
 
         func_list.sort()
 
         if ignore_phase:
-            func_list = [
-                bold for bold in func_list if "part-phase" not in bold
-            ]
+            func_list = [bold for bold in func_list if "part-phase" not in bold]
 
-        self._check_str_in_list(func_list, '_dir-')
+        self._check_str_in_list(func_list, "_dir-")
 
         if full_path_flag:
             return [f"{func_dir}/{i}" for i in func_list]
@@ -151,9 +130,7 @@ class bids_reader:
         for _dict in t1w_list:
             for value in _dict.values():
                 for _type, path in value.items():
-                    assert os.path.exists(
-                        path
-                    ), f"Path [{path}] does not exist."
+                    assert os.path.exists(path), f"Path [{path}] does not exist."
 
         if len(t1w_list) > 1:
             print("WARNING: multiple T1w acquisitions were found.")
@@ -163,8 +140,7 @@ class bids_reader:
         assert len(t1w_list) != 0, "No T1w acquisitions were found."
 
         return t1w_list[-1]
-    
-    def _check_str_in_list(self, str_list, _str):
 
+    def _check_str_in_list(self, str_list, _str):
         for s in str_list:
             assert _str in s, f"{s} does not contain {_str}."

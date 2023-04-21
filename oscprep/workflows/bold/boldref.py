@@ -4,9 +4,7 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
 
-def init_bold_ref_wf(
-    bold, split_vol_id=0, name="get_bold_reference_wf"
-):
+def init_bold_ref_wf(bold, split_vol_id=0, name="get_bold_reference_wf"):
     """
     Get the bold reference image corresponding
     to the 4D bold image

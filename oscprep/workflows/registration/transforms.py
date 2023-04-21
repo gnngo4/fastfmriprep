@@ -18,9 +18,7 @@ def init_anat_to_fmap(name="reg_anat_to_fmap_wf"):
     )
 
     outputnode = pe.Node(
-        niu.IdentityInterface(
-            fields=["itk_anat2fmap", "itk_fmap2anat"]
-        ),
+        niu.IdentityInterface(fields=["itk_anat2fmap", "itk_fmap2anat"]),
         name="outputnode",
     )
 
@@ -33,9 +31,7 @@ def init_anat_to_fmap(name="reg_anat_to_fmap_wf"):
         name="fsl2itk_fwd",
     )
 
-    invt_flt_transform = pe.Node(
-        fsl.ConvertXFM(invert_xfm=True), name="flirt_invt_xfm"
-    )
+    invt_flt_transform = pe.Node(fsl.ConvertXFM(invert_xfm=True), name="flirt_invt_xfm")
     fsl2itk_invt = pe.Node(
         c3.C3dAffineTool(fsl2ras=True, itk_transform=True),
         name="fsl2itk_invt",
@@ -107,9 +103,7 @@ def init_fmap_to_wholebrain_bold_wf(
     workflow = Workflow(name=name)
 
     inputnode = pe.Node(
-        niu.IdentityInterface(
-            fields=["itk_anat2wholebrainbold", "itk_fmap2anat"]
-        ),
+        niu.IdentityInterface(fields=["itk_anat2wholebrainbold", "itk_fmap2anat"]),
         name="inputnode",
     )
 
@@ -320,9 +314,7 @@ def init_wholebrain_bold_to_anat_wf(
         name="outputnode",
     )
 
-    n4_bold = pe.Node(
-        N4BiasFieldCorrection(), name="n4_bias_correct_bold"
-    )
+    n4_bold = pe.Node(N4BiasFieldCorrection(), name="n4_bias_correct_bold")
 
     wholebrain_bold_to_anat = init_bbreg_wf(
         use_bbr=use_bbr,
@@ -333,15 +325,11 @@ def init_wholebrain_bold_to_anat_wf(
     )
 
     dseg_to_wholebrain_bold = pe.Node(
-        ApplyTransforms(
-            invert_transform_flags=[False], interpolation="MultiLabel"
-        ),
+        ApplyTransforms(invert_transform_flags=[False], interpolation="MultiLabel"),
         name="dseg_to_undistorted_wholebrain_bold",
     )
 
-    gen_ref = pe.Node(
-        GenerateSamplingReference(), name="generate_reference"
-    )
+    gen_ref = pe.Node(GenerateSamplingReference(), name="generate_reference")
 
     apply_wholebrain_bold_to_t1 = pe.Node(
         ApplyTransforms(
@@ -359,12 +347,8 @@ def init_wholebrain_bold_to_anat_wf(
         name="threshold_wholebrain_bold_to_t1",
     )
 
-    fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(
-        name="itk2fsl_wholebrain_bold_to_t1"
-    )
-    inv_itk_to_fsl = init_itk_to_fsl_affine_wf(
-        name="itk2fsl_t1_to_wholebrain_bold"
-    )
+    fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(name="itk2fsl_wholebrain_bold_to_t1")
+    inv_itk_to_fsl = init_itk_to_fsl_affine_wf(name="itk2fsl_t1_to_wholebrain_bold")
 
     workflow.connect(
         [
@@ -568,9 +552,7 @@ def init_slab_bold_to_wholebrain_bold_wf(
         name="outputnode",
     )
 
-    n4_bold = pe.Node(
-        N4BiasFieldCorrection(), name="n4_bias_correct_bold"
-    )
+    n4_bold = pe.Node(N4BiasFieldCorrection(), name="n4_bias_correct_bold")
 
     slab_bold_to_wholebrain_bold = init_fsl_bbr_wf(
         bold2t1w_dof=bold2t1w_dof,
@@ -740,9 +722,7 @@ def init_slab_to_slabref_bold_wf(
         name="outputnode",
     )
 
-    n4_bold = pe.Node(
-        N4BiasFieldCorrection(), name="n4_bias_correct_bold"
-    )
+    n4_bold = pe.Node(N4BiasFieldCorrection(), name="n4_bias_correct_bold")
 
     slab_to_slabref_bold = init_fsl_bbr_wf(
         bold2t1w_dof=bold2t1w_dof,
@@ -752,12 +732,8 @@ def init_slab_to_slabref_bold_wf(
         name="reg_slab_to_slabref_bold",
     )
 
-    fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(
-        name="itk2fsl_slab_to_slabref_bold"
-    )
-    inv_itk_to_fsl = init_itk_to_fsl_affine_wf(
-        name="itk2fsl_slabref_to_slab_bold"
-    )
+    fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(name="itk2fsl_slab_to_slabref_bold")
+    inv_itk_to_fsl = init_itk_to_fsl_affine_wf(name="itk2fsl_slabref_to_slab_bold")
 
     workflow.connect(
         [

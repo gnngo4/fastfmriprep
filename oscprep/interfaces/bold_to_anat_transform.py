@@ -29,10 +29,8 @@ def _BoldToT1Transform(
     vol_t1_bold = []
     assert len(bold_list) == len(
         hmc_mats
-    ), "hmc mats and splitted bold data are not equal lengths."
-    for ix, (vol_mat, vol_bold) in enumerate(
-        zip(hmc_mats, bold_list)
-    ):
+    ), "hmc mats and split bold data are not equal lengths."
+    for ix, (vol_mat, vol_bold) in enumerate(zip(hmc_mats, bold_list)):
         if debug and ix == 10:
             break
 
@@ -75,9 +73,7 @@ def _BoldToT1Transform(
     merged_nii = nib.funcs.concat_images(vol_t1_bold)
     nib.save(merged_nii, BOLD_TO_T1_BASE)
     # Assertion
-    assert os.path.exists(
-        BOLD_TO_T1_BASE
-    ), f"{BOLD_TO_T1_BASE} was not created."
+    assert os.path.exists(BOLD_TO_T1_BASE), f"{BOLD_TO_T1_BASE} was not created."
 
 
 class BoldToT1TransformInputSpec(TraitedSpec):
@@ -87,17 +83,13 @@ class BoldToT1TransformInputSpec(TraitedSpec):
         desc="list of hmc affine mat files",
         mandatory=True,
     )
-    bold_to_t1_warp = File(
-        exists=True, desc="bold to t1 warp", mandatory=True
-    )
+    bold_to_t1_warp = File(exists=True, desc="bold to t1 warp", mandatory=True)
     t1_resampled = File(
         exists=True,
         desc="t1 resampled to resolution of bold data",
         mandatory=True,
     )
-    repetition_time = traits.Float(
-        desc="repetition time (TR)", mandatory=True
-    )
+    repetition_time = traits.Float(desc="repetition time (TR)", mandatory=True)
     debug = traits.Bool(
         desc="debug generates bold images with the first 10 volumes",
         mandatory=True,
@@ -105,9 +97,7 @@ class BoldToT1TransformInputSpec(TraitedSpec):
 
 
 class BoldToT1TransformOutputSpec(TraitedSpec):
-    t1_bold_path = File(
-        exists=True, desc="transformed-to-t1 bold path"
-    )
+    t1_bold_path = File(exists=True, desc="transformed-to-t1 bold path")
 
 
 class BoldToT1Transform(SimpleInterface):

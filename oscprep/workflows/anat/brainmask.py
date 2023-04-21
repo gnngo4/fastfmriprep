@@ -47,9 +47,7 @@ def init_brainmask_mp2rage_wf(name="skullstrip_mp2rage_wf"):
     )
 
     # Denoise MP2RAGE image
-    denoise_mp2rage = pe.Node(
-        Mp2rageDenoise(), name="denoise_mp2rage"
-    )
+    denoise_mp2rage = pe.Node(Mp2rageDenoise(), name="denoise_mp2rage")
 
     # Skullstrip MP2RAGE at native resolution
     synthstrip_native = pe.Node(
@@ -71,17 +69,13 @@ def init_brainmask_mp2rage_wf(name="skullstrip_mp2rage_wf"):
 
     # Resample upsampled synthstrip-ed mask to native resolution
     resample_up_mask = pe.Node(
-        fsl.ApplyXFM(
-            uses_qform=True, out_file="resampled_mask.nii.gz"
-        ),
+        fsl.ApplyXFM(uses_qform=True, out_file="resampled_mask.nii.gz"),
         name="resample_upsampled_mask",
     )
 
     # Combine masks from `synthstrip_native` and `synthstrip_up`
     combine_masks = pe.Node(
-        fsl.MultiImageMaths(
-            op_string="-add %s -bin", out_file="combined_mask.nii.gz"
-        ),
+        fsl.MultiImageMaths(op_string="-add %s -bin", out_file="combined_mask.nii.gz"),
         name="combine_masks",
     )
 

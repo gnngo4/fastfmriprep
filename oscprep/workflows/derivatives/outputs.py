@@ -53,9 +53,7 @@ def init_anat_brainmask_derivatives_wf(
         name="ds_t1w_brainmask",
         run_without_submitting=True,
     )
-    ds_t1w_brainmask.inputs.source_file = (
-        f"{output_dir}/{t1w_brainmask_base}"
-    )
+    ds_t1w_brainmask.inputs.source_file = f"{output_dir}/{t1w_brainmask_base}"
 
     workflow.connect(
         [
@@ -94,16 +92,12 @@ def init_bold_brainmask_derivatives_wf(
     workflow = Workflow(name=name)
 
     inputnode = pe.Node(
-        niu.IdentityInterface(
-            fields=["bold_brain", "bold_brainmask"]
-        ),
+        niu.IdentityInterface(fields=["bold_brain", "bold_brainmask"]),
         name="inputnode",
     )
 
     outputnode = pe.Node(
-        niu.IdentityInterface(
-            fields=["bold_brain", "bold_brainmask"]
-        ),
+        niu.IdentityInterface(fields=["bold_brain", "bold_brainmask"]),
         name="outputnode",
     )
 
@@ -117,9 +111,7 @@ def init_bold_brainmask_derivatives_wf(
         name=f"ds_bold_{bold_type}_brain",
         run_without_submitting=True,
     )
-    ds_bold_brain.inputs.source_file = (
-        f"{output_dir}/{bold_brain_base}"
-    )
+    ds_bold_brain.inputs.source_file = f"{output_dir}/{bold_brain_base}"
 
     ds_bold_brainmask = pe.Node(
         DerivativesDataSink(
@@ -131,9 +123,7 @@ def init_bold_brainmask_derivatives_wf(
         name=f"ds_bold_{bold_type}_brainmask",
         run_without_submitting=True,
     )
-    ds_bold_brainmask.inputs.source_file = (
-        f"{output_dir}/{bold_brainmask_base}"
-    )
+    ds_bold_brainmask.inputs.source_file = f"{output_dir}/{bold_brainmask_base}"
 
     workflow.connect(
         [
@@ -226,12 +216,8 @@ def init_wholebrain_bold_preproc_derivatives_wf(
     """
     Transformations
     """
-    sub_ses_reg_dir = (
-        f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/reg"
-    )
-    sub_ses_figures_dir = (
-        f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/figures"
-    )
+    sub_ses_reg_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/reg"
+    sub_ses_figures_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/figures"
     for _dir in [sub_ses_reg_dir, sub_ses_figures_dir]:
         if not os.path.isdir(_dir):
             os.makedirs(_dir)
@@ -259,7 +245,9 @@ def init_wholebrain_bold_preproc_derivatives_wf(
     """
     wholebrain bold preprocessing (prereqs for running slab bold preprocessing)
     """
-    sub_ses_wholebrain_bold_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/wholebrain_bold"
+    sub_ses_wholebrain_bold_dir = (
+        f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/wholebrain_bold"
+    )
     for _dir in [sub_ses_wholebrain_bold_dir]:
         if not os.path.isdir(_dir):
             os.makedirs(_dir)
@@ -289,9 +277,7 @@ def init_wholebrain_bold_preproc_derivatives_wf(
 
     ds_distorted_dseg = pe.Node(
         ExportFile(
-            out_file=(
-                f"{output_dir}/{out_path_base}/{distorted_dseg_base}"
-            ),
+            out_file=(f"{output_dir}/{out_path_base}/{distorted_dseg_base}"),
             check_extension=False,
             clobber=True,
         ),
@@ -510,7 +496,9 @@ def init_slab_reference_bold_preproc_derivatives_wf(
     """
     slabref bold preprocessing (prereqs for running slab bold preprocessing)
     """
-    sub_ses_slabref_bold_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/slab_reference_bold"
+    sub_ses_slabref_bold_dir = (
+        f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/slab_reference_bold"
+    )
     for _dir in [sub_ses_slabref_bold_dir]:
         if not os.path.isdir(_dir):
             os.makedirs(_dir)
@@ -524,9 +512,7 @@ def init_slab_reference_bold_preproc_derivatives_wf(
             check_extension=False,
             clobber=True,
         ),
-        name=(
-            f"ds_{workflow_name_base}_slabref_to_wholebrain_bold_mat"
-        ),
+        name=(f"ds_{workflow_name_base}_slabref_to_wholebrain_bold_mat"),
         run_without_submitting=True,
     )
 
@@ -536,9 +522,7 @@ def init_slab_reference_bold_preproc_derivatives_wf(
             check_extension=False,
             clobber=True,
         ),
-        name=(
-            f"ds_{workflow_name_base}_slabref_to_wholebrain_bold_svg"
-        ),
+        name=(f"ds_{workflow_name_base}_slabref_to_wholebrain_bold_svg"),
         run_without_submitting=True,
     )
 
@@ -699,15 +683,9 @@ def init_slab_bold_preproc_derivatives_wf(
     )
 
     # Make directories
-    sub_ses_reg_dir = (
-        f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/reg"
-    )
-    sub_ses_roi_dir = (
-        f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/roi"
-    )
-    sub_ses_figures_dir = (
-        f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/figures"
-    )
+    sub_ses_reg_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/reg"
+    sub_ses_roi_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/roi"
+    sub_ses_figures_dir = f"{output_dir}/{out_path_base}/{sub_id}/{ses_id}/figures"
     for _dir in [
         sub_ses_reg_dir,
         sub_ses_roi_dir,
@@ -731,9 +709,7 @@ def init_slab_bold_preproc_derivatives_wf(
     # Bold brainmask image in t1 space
     ds_bold_brainmask = pe.Node(
         ExportFile(
-            out_file=(
-                f"{output_dir}/{out_path_base}/{bold_brainmask_base}"
-            ),
+            out_file=(f"{output_dir}/{out_path_base}/{bold_brainmask_base}"),
             check_extension=False,
             clobber=True,
         ),
@@ -751,18 +727,14 @@ def init_slab_bold_preproc_derivatives_wf(
         name=f"ds_{workflow_name_base}_bold_preproc",
         run_without_submitting=True,
     )
-    ds_bold_preproc.inputs.source_file = (
-        f"{output_dir}/{bold_preproc_base}"
-    )
+    ds_bold_preproc.inputs.source_file = f"{output_dir}/{bold_preproc_base}"
 
     """
     Confound files
     """
     ds_bold_confounds = pe.Node(
         ExportFile(
-            out_file=(
-                f"{output_dir}/{out_path_base}/{bold_confounds_base}"
-            ),
+            out_file=(f"{output_dir}/{out_path_base}/{bold_confounds_base}"),
             check_extension=False,
             clobber=True,
         ),
@@ -771,9 +743,7 @@ def init_slab_bold_preproc_derivatives_wf(
     )
     ds_bold_roi_svg = pe.Node(
         ExportFile(
-            out_file=(
-                f"{output_dir}/{out_path_base}/{bold_roi_svg_base}"
-            ),
+            out_file=(f"{output_dir}/{out_path_base}/{bold_roi_svg_base}"),
             check_extension=False,
             clobber=True,
         ),
@@ -809,9 +779,7 @@ def init_slab_bold_preproc_derivatives_wf(
     )
     ds_bold_tcompcor = pe.Node(
         ExportFile(
-            out_file=(
-                f"{output_dir}/{out_path_base}/{bold_tcompcor_base}"
-            ),
+            out_file=(f"{output_dir}/{out_path_base}/{bold_tcompcor_base}"),
             check_extension=False,
             clobber=True,
         ),
@@ -820,9 +788,7 @@ def init_slab_bold_preproc_derivatives_wf(
     )
     ds_bold_crownmask = pe.Node(
         ExportFile(
-            out_file=(
-                f"{output_dir}/{out_path_base}/{bold_crownmask_base}"
-            ),
+            out_file=(f"{output_dir}/{out_path_base}/{bold_crownmask_base}"),
             check_extension=False,
             clobber=True,
         ),
@@ -842,9 +808,7 @@ def init_slab_bold_preproc_derivatives_wf(
         name=f"ds_{workflow_name_base}_hmc",
         run_without_submitting=True,
     )
-    ds_bold_hmc.inputs.save_base = (
-        f"{output_dir}/{out_path_base}/{bold_hmc_base}"
-    )
+    ds_bold_hmc.inputs.save_base = f"{output_dir}/{out_path_base}/{bold_hmc_base}"
 
     ds_slab_to_slabref_mat = pe.Node(
         ExportFile(
@@ -974,9 +938,7 @@ def save_slab_bold_hmc(hmc_list, save_base):
 
     for ix, vol_affine in enumerate(hmc_list):
         _vol_affine = vol_affine.split("/")[-1]
-        ds_vol_affine = ExportFile(
-            out_file=f"{save_base}/{_vol_affine}"
-        )
+        ds_vol_affine = ExportFile(out_file=f"{save_base}/{_vol_affine}")
         ds_vol_affine.inputs.in_file = vol_affine
         ds_vol_affine.run()
 

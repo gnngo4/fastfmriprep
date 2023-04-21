@@ -11,9 +11,7 @@ import os
 
 
 def MP2RAGErobustfunc(INV1, INV2, beta):
-    return (np.conj(INV1) * INV2 - beta) / (
-        INV1**2 + INV2**2 + 2 * beta
-    )
+    return (np.conj(INV1) * INV2 - beta) / (INV1**2 + INV2**2 + 2 * beta)
 
 
 def rootsquares_pos(a, b, c):
@@ -71,27 +69,19 @@ def _MP2RAGEdenoise(mp2rage_path, inv1_path, inv2_path, factor):
     INV1final = INV1img_img
 
     INV1final[
-        np.absolute(INV1img_img - INV1pos)
-        > np.absolute(INV1img_img - INV1neg)
-    ] = INV1neg[
-        np.absolute(INV1img_img - INV1pos)
-        > np.absolute(INV1img_img - INV1neg)
-    ]
+        np.absolute(INV1img_img - INV1pos) > np.absolute(INV1img_img - INV1neg)
+    ] = INV1neg[np.absolute(INV1img_img - INV1pos) > np.absolute(INV1img_img - INV1neg)]
     INV1final[
-        np.absolute(INV1img_img - INV1pos)
-        <= np.absolute(INV1img_img - INV1neg)
+        np.absolute(INV1img_img - INV1pos) <= np.absolute(INV1img_img - INV1neg)
     ] = INV1pos[
-        np.absolute(INV1img_img - INV1pos)
-        <= np.absolute(INV1img_img - INV1neg)
+        np.absolute(INV1img_img - INV1pos) <= np.absolute(INV1img_img - INV1neg)
     ]
 
     # usually the multiplicative factor shouldn't be greater then 10, but that
     # is not the ase when the image is bias field corrected, in which case the
     # noise estimated at the edge of the imagemight not be such a good measure
     multiplyingFactor = factor
-    noiselevel = multiplyingFactor * np.mean(
-        INV2img_img[:, -11:, -11:]
-    )
+    noiselevel = multiplyingFactor * np.mean(INV2img_img[:, -11:, -11:])
 
     # % MP2RAGEimgRobustScanner = MP2RAGErobustfunc(INV1img.img, INV2img.img, noiselevel. ^ 2)
     MP2RAGEimgRobustPhaseSensitive = MP2RAGErobustfunc(
@@ -101,9 +91,7 @@ def _MP2RAGEdenoise(mp2rage_path, inv1_path, inv2_path, factor):
     if integerformat == 0:
         MP2RAGEimg_img = MP2RAGEimgRobustPhaseSensitive
     else:
-        MP2RAGEimg_img = np.round(
-            4095 * (MP2RAGEimgRobustPhaseSensitive + 0.5)
-        )
+        MP2RAGEimg_img = np.round(4095 * (MP2RAGEimgRobustPhaseSensitive + 0.5))
 
     # Save image
     MP2RAGEimg_img = nb.casting.float_to_int(MP2RAGEimg_img, "int16")
@@ -118,15 +106,11 @@ class Mp2rageDenoiseInputSpec(TraitedSpec):
     mp2rage = File(exists=True, desc="mp2rage path", mandatory=True)
     inv1 = File(exists=True, desc="inv1 path", mandatory=True)
     inv2 = File(exists=True, desc="inv2 path", mandatory=True)
-    factor = traits.Int(
-        desc="denoising regularization factor", mandatory=True
-    )
+    factor = traits.Int(desc="denoising regularization factor", mandatory=True)
 
 
 class Mp2rageDenoiseOutputSpec(TraitedSpec):
-    mp2rage_denoised_path = File(
-        exists=True, desc="mp2rage denoised path"
-    )
+    mp2rage_denoised_path = File(exists=True, desc="mp2rage denoised path")
 
 
 class Mp2rageDenoise(SimpleInterface):

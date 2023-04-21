@@ -80,9 +80,7 @@ def get_wholebrain_bold_preproc_source_files(bold_path, use_fmaps):
     }
 
 
-def get_slab_reference_bold_preproc_source_files(
-    bold_path, use_fmaps
-):
+def get_slab_reference_bold_preproc_source_files(bold_path, use_fmaps):
     sub_id, ses_id, run_id = _parse_path(bold_path)
     # transforms
     slabref_to_wholebrain_bold_mat = f"{sub_id}/{ses_id}/reg/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','from-slabref_to-wholebrain_xfm.mat')}"

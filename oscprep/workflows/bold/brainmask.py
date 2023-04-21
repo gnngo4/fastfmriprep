@@ -64,9 +64,7 @@ def init_bold_wholebrain_brainmask_wf(
     )
 
     # n4
-    n4_bold = pe.Node(
-        N4BiasFieldCorrection(), name="n4_bias_correct_bold"
-    )
+    n4_bold = pe.Node(N4BiasFieldCorrection(), name="n4_bias_correct_bold")
 
     # bbreg t1-to-wholebrain-bold
     bbr_wf = init_bbreg_wf(
@@ -237,9 +235,7 @@ def init_bold_slabref_brainmask_wf(
     )
 
     # n4
-    n4_bold = pe.Node(
-        N4BiasFieldCorrection(), name="n4_bias_correct_bold"
-    )
+    n4_bold = pe.Node(N4BiasFieldCorrection(), name="n4_bias_correct_bold")
 
     # fsl_bbr slab-bold-to-wholebrain-bold
     fsl_bbr_wf = init_fsl_bbr_wf(

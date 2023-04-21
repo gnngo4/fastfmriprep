@@ -98,9 +98,7 @@ def run():
     # mp2rage
     MP2RAGE_DENOISE_FACTOR = args.mp2rage_denoise_factor
     MP2RAGE_SYNTHSTRIP_NO_CSF = args.mp2rage_synthstrip_no_csf_flag
-    MP2RAGE_SYNTHSTRIP_UPSAMPLE_RESOLUTION = (
-        args.mp2rage_synthstrip_res
-    )
+    MP2RAGE_SYNTHSTRIP_UPSAMPLE_RESOLUTION = args.mp2rage_synthstrip_res
     # mprage
     MPRAGE_SYNTHSTRIP_NO_CSF = args.mprage_synthstrip_no_csf_flag
     # bold
@@ -126,14 +124,10 @@ def run():
     layout = BIDSLayout(BIDS_DIR)
     ## get anat info - Only 1 T1w image is expected across all sessions
     ANAT_PATH = bids_util.get_t1w_list(SUBJECT_ID)
-    assert (
-        len(ANAT_PATH) == 1
-    ), f"Only 1 T1w key-pair is expected.\n{ANAT_PATH}"
+    assert len(ANAT_PATH) == 1, f"Only 1 T1w key-pair is expected.\n{ANAT_PATH}"
     ANAT_ACQ, ANAT_FILES = list(ANAT_PATH.items())[0]
     ANAT_SUBJECT_ID, ANAT_SESSION_ID = (
-        ANAT_FILES[list(ANAT_FILES.keys())[0]]
-        .split(BIDS_DIR)[1]
-        .split("/")[1:3]
+        ANAT_FILES[list(ANAT_FILES.keys())[0]].split(BIDS_DIR)[1].split("/")[1:3]
     )
     # get slab bold info
     NON_SLAB_TASKS = ["reversephase", "wholebrain", "None"]
@@ -154,8 +148,7 @@ def run():
             )
         )
     scan_times, BOLD_SLAB_PATHS = (
-        list(i)
-        for i in zip(*sorted(zip(scan_times, BOLD_SLAB_PATHS)))
+        list(i) for i in zip(*sorted(zip(scan_times, BOLD_SLAB_PATHS)))
     )
 
     # `bold_slab` selection filters
@@ -171,20 +164,12 @@ def run():
     for bold_slab in BOLD_SLAB_PATHS:
         # check if file `bold_slab` is already processed
         processed_flag = False
-        source_preproc_slab_bold = get_slab_bold_preproc_source_files(
-            bold_slab
-        )
+        source_preproc_slab_bold = get_slab_bold_preproc_source_files(bold_slab)
         for src_k, src_v in source_preproc_slab_bold.items():
             f_exist = os.path.exists(
-                os.path.join(
-                    DERIV_DIR, BOLD_PREPROC_DIR.split("/")[-1], src_v
-                )
+                os.path.join(DERIV_DIR, BOLD_PREPROC_DIR.split("/")[-1], src_v)
             )
-            if (
-                src_v.endswith(".nii.gz")
-                and "func" in src_v.split("/")
-                and f_exist
-            ):
+            if src_v.endswith(".nii.gz") and "func" in src_v.split("/") and f_exist:
                 processed_flag = True
         BOLD_SLAB_PATHS_RUN.append(processed_flag)
         # select `bold_slab` based on `args.select_task`
@@ -202,7 +187,9 @@ def run():
             run_flag = True
         BOLD_SLAB_PATHS_SELECT_RUN.append(run_flag)
     # get most common direction from `BOLD_SLAB_PATHS`
-    most_common_pe_dir = Counter([i.split('_dir-')[1].split('_')[0] for i in BOLD_SLAB_PATHS]).most_common()[0][0]
+    most_common_pe_dir = Counter(
+        [i.split("_dir-")[1].split("_")[0] for i in BOLD_SLAB_PATHS]
+    ).most_common()[0][0]
     # get wholebrain bold info
     BOLD_WHOLEBRAIN_PATHS = bids_util.get_bold_list(
         SUBJECT_ID,
@@ -220,11 +207,17 @@ def run():
             "WARNING: There are more than 1 wholebrain bold"
             f" images.\n{BOLD_WHOLEBRAIN_PATHS}"
         )
-        FILTERED_BOLD_WHOLEBRAIN_PATHS = [i for i in BOLD_WHOLEBRAIN_PATHS if f"_dir-{most_common_pe_dir}_" in i]
-        assert len(FILTERED_BOLD_WHOLEBRAIN_PATHS) > 0, f"No wholebrain bold scans have phase encoding direction of dir-{most_common_pe_dir}"
+        FILTERED_BOLD_WHOLEBRAIN_PATHS = [
+            i for i in BOLD_WHOLEBRAIN_PATHS if f"_dir-{most_common_pe_dir}_" in i
+        ]
+        assert (
+            len(FILTERED_BOLD_WHOLEBRAIN_PATHS) > 0
+        ), f"No wholebrain bold scans have phase encoding direction of dir-{most_common_pe_dir}"
         bold_wholebrain = FILTERED_BOLD_WHOLEBRAIN_PATHS[-1]
     else:
-        raise ValueError(f"Value cannot be zero\nNumber of detected wholebrain bold scans: {n_wholebrain_bold_scans}")
+        raise ValueError(
+            f"Value cannot be zero\nNumber of detected wholebrain bold scans: {n_wholebrain_bold_scans}"
+        )
 
     """
     Workflow flags
@@ -242,9 +235,7 @@ def run():
     DERIV_WORKFLOW_FLAGS["wholebrain_bold_preproc"] = os.path.isdir(
         f"{BOLD_PREPROC_DIR}/sub-{SUBJECT_ID}/ses-{SESSION_ID}/wholebrain_bold"
     )
-    DERIV_WORKFLOW_FLAGS[
-        "slab_bold_reference_preproc"
-    ] = os.path.isdir(
+    DERIV_WORKFLOW_FLAGS["slab_bold_reference_preproc"] = os.path.isdir(
         f"{BOLD_PREPROC_DIR}/sub-{SUBJECT_ID}/ses-{SESSION_ID}/wholebrain_bold"
     )
     # Print
@@ -273,10 +264,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     # Slab bold paths
     print("----BOLD [Slab]----")
     if args.slab_bold_quick:
-        print(
-            "[slab_bold_quick] invoked.\nOnly the first 10 volumes"
-            " are outputted."
-        )
+        print("[slab_bold_quick] invoked.\nOnly the first 10 volumes" " are outputted.")
     for processed_flag, select_task_flag, select_run_flag, p in zip(
         BOLD_SLAB_PATHS_RUN,
         BOLD_SLAB_PATHS_SELECT_TASK,
@@ -290,9 +278,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             _t = True  # Selected
         if select_run_flag:
             _r = True  # Selected
-        print(
-            f"[{_s}|{_t}|{_r}] {p}"
-        )  # Only False | True | True are processed.
+        print(f"[{_s}|{_t}|{_r}] {p}")  # Only False | True | True are processed.
     # Workflow flags
     print("\n[Workflows]")
     for k, q in DERIV_WORKFLOW_FLAGS.items():
@@ -328,9 +314,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         anat_ses_id,
         anat_run_id,
     ) = get_anat_brainmask_source_files(ANAT_ACQ, ANAT_FILES)
-    t1w_input = (  # Mandatory argument
-        f"{BRAINMASK_DIR}/{source_brain}"
-    )
+    t1w_input = f"{BRAINMASK_DIR}/{source_brain}"  # Mandatory argument
     # anat_buffer(s)
     anat_bm_buffer = pe.Node(
         niu.IdentityInterface(["t1w_brain"]),
@@ -377,26 +361,18 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             brainmask_inputnode.inputs.mp2rage = ANAT_FILES["UNI"]
             brainmask_inputnode.inputs.inv1 = ANAT_FILES["INV1"]
             brainmask_inputnode.inputs.inv2 = ANAT_FILES["INV2"]
-            brainmask_inputnode.inputs.denoise_factor = (
-                MP2RAGE_DENOISE_FACTOR
-            )
-            brainmask_inputnode.inputs.ss_native_no_csf = (
-                MP2RAGE_SYNTHSTRIP_NO_CSF
-            )
+            brainmask_inputnode.inputs.denoise_factor = MP2RAGE_DENOISE_FACTOR
+            brainmask_inputnode.inputs.ss_native_no_csf = MP2RAGE_SYNTHSTRIP_NO_CSF
             brainmask_inputnode.inputs.upsample_resolution = (
                 MP2RAGE_SYNTHSTRIP_UPSAMPLE_RESOLUTION
             )
-            brainmask_inputnode.inputs.ss_up_no_csf = (
-                MP2RAGE_SYNTHSTRIP_NO_CSF
-            )
+            brainmask_inputnode.inputs.ss_up_no_csf = MP2RAGE_SYNTHSTRIP_NO_CSF
             # mp2rage brainmask derivatives workflow
-            anat_brainmask_derivatives_wf = (
-                init_anat_brainmask_derivatives_wf(
-                    DERIV_DIR,
-                    source_brain,
-                    source_brainmask,
-                    out_path_base=BRAINMASK_DIR.split("/")[-1],
-                )
+            anat_brainmask_derivatives_wf = init_anat_brainmask_derivatives_wf(
+                DERIV_DIR,
+                source_brain,
+                source_brainmask,
+                out_path_base=BRAINMASK_DIR.split("/")[-1],
             )
             # connect
             wf.connect(
@@ -464,17 +440,13 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 name="brainmask_inputnode",
             )
             brainmask_inputnode.inputs.mprage = ANAT_FILES["T1w"]
-            brainmask_inputnode.inputs.no_csf = (
-                MPRAGE_SYNTHSTRIP_NO_CSF
-            )
+            brainmask_inputnode.inputs.no_csf = MPRAGE_SYNTHSTRIP_NO_CSF
             # mprage brainmask derivatives workflow
-            anat_brainmask_derivatives_wf = (
-                init_anat_brainmask_derivatives_wf(
-                    DERIV_DIR,
-                    source_brain,
-                    source_brainmask,
-                    out_path_base=BRAINMASK_DIR.split("/")[-1],
-                )
+            anat_brainmask_derivatives_wf = init_anat_brainmask_derivatives_wf(
+                DERIV_DIR,
+                source_brain,
+                source_brainmask,
+                out_path_base=BRAINMASK_DIR.split("/")[-1],
             )
             # connect
             wf.connect(
@@ -527,9 +499,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             omp_nthreads=OMP_NTHREADS,
             output_dir=DERIV_DIR,
             skull_strip_template=Reference("OASIS30ANTs"),
-            spaces=SpatialReferences(
-                spaces=["MNI152NLin2009cAsym", "fsaverage5"]
-            ),
+            spaces=SpatialReferences(spaces=["MNI152NLin2009cAsym", "fsaverage5"]),
             debug=True,
             skull_strip_mode="skip",
             skull_strip_fixed_seed=False,
@@ -592,12 +562,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             "subject_id": f"sub-{SUBJECT_ID}",
             "subjects_dir": FREESURFER_DIR,
             "fsnative2t1w_xfm": f"{anat_preproc_base}_from-fsnative_to-T1w_mode-image_xfm.txt",
-            "fs_t1w_brain": (
-                f"{anat_preproc_base}_desc-preproc_T1w.nii.gz"
-            ),
-            "t1w_brainmask": (
-                f"{anat_preproc_base}_desc-brain_mask.nii.gz"
-            ),
+            "fs_t1w_brain": (f"{anat_preproc_base}_desc-preproc_T1w.nii.gz"),
+            "t1w_brainmask": (f"{anat_preproc_base}_desc-brain_mask.nii.gz"),
             "t1w_dseg": f"{anat_preproc_base}_desc-brain_dseg.nii.gz",
             "t1w_tpms": [
                 f"{anat_preproc_base}_label-GM_desc-brain_probseg.nii.gz",
@@ -625,10 +591,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
 
     # Checkpoint
     if args.anat_flag:
-        print(
-            "\n[anat_flag] invoked.\nOnly running anatomical"
-            " processing pipeline."
-        )
+        print("\n[anat_flag] invoked.\nOnly running anatomical" " processing pipeline.")
         wf.run()
         return 0
 
@@ -654,20 +617,15 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             layout=layout, subject=SUBJECT_ID, sessions=SESSION_ID
         )
         assert len(fmap_estimators) == 1, (
-            f"There are {len(fmap_estimators)} fieldmap estimators."
-            " Expected is 1."
+            f"There are {len(fmap_estimators)} fieldmap estimators." " Expected is 1."
         )
-        assert (
-            fmap_estimators[0].method == fm.EstimatorType.PHASEDIFF
-        ), (
+        assert fmap_estimators[0].method == fm.EstimatorType.PHASEDIFF, (
             f"EstimatorType is {fmap_estimators[0].method}. Expect is"
             f" {fm.EstimatorType.PHASEDIFF}"
         )
         _fmap_estimator = fmap_estimators[0]
         phasediff = [
-            str(i.path)
-            for i in _fmap_estimator.sources
-            if "phasediff" in str(i.path)
+            str(i.path) for i in _fmap_estimator.sources if "phasediff" in str(i.path)
         ][0]
         if not DERIV_WORKFLOW_FLAGS["fmap_preproc"]:
             # Process fieldmap
@@ -731,15 +689,11 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 fmap_inputs["fmap"] = phasediff
             # set fmap_buffer inputs
             for _key, _path in fmap_inputs.items():
-                assert os.path.exists(
-                    _path
-                ), f"{_path} does not exist."
+                assert os.path.exists(_path), f"{_path} does not exist."
                 setattr(fmap_buffer.inputs, _key, _path)
 
         # register anat to fmap
-        anat_to_fmap_wf = init_anat_to_fmap(
-            name="reg_anat_to_fmap_wf"
-        )
+        anat_to_fmap_wf = init_anat_to_fmap(name="reg_anat_to_fmap_wf")
         wf.connect(
             [
                 (
@@ -759,10 +713,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     Set-up wholebrain bold workflows
     """
     # get output names for all wholebrain bold related files
-    source_preproc_wholebrain_bold = (
-        get_wholebrain_bold_preproc_source_files(
-            bold_wholebrain, use_fmaps=use_fmaps
-        )
+    source_preproc_wholebrain_bold = get_wholebrain_bold_preproc_source_files(
+        bold_wholebrain, use_fmaps=use_fmaps
     )
     # wholebrain_bold_buffer
     wholebrain_bold_buffer = pe.Node(
@@ -789,20 +741,16 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             niu.IdentityInterface(["wholebrain_bold"]),
             name="bold_wholebrain_inputnode",
         )
-        wholebrain_bold_inputnode.inputs.wholebrain_bold = (
-            bold_wholebrain
-        )
+        wholebrain_bold_inputnode.inputs.wholebrain_bold = bold_wholebrain
         # get wholebrain bold reference image
         wholebrain_bold_ref_wf = init_bold_ref_wf(
             bold_wholebrain, name="wholebrain_bold_reference_wf"
         )
         # get wholebrain bold brainmask
-        wholebrain_bold_brainmask_wf = (
-            init_bold_wholebrain_brainmask_wf(
-                bold2t1w_dof=args.reg_wholebrain_to_anat_dof,
-                use_bbr=args.reg_wholebrain_to_anat_bbr,
-                name="wholebrain_bold_brainmask_wf",
-            )
+        wholebrain_bold_brainmask_wf = init_bold_wholebrain_brainmask_wf(
+            bold2t1w_dof=args.reg_wholebrain_to_anat_dof,
+            use_bbr=args.reg_wholebrain_to_anat_bbr,
+            name="wholebrain_bold_brainmask_wf",
         )
         # save wholebrain bold brainmask in derivative directories
         (
@@ -812,15 +760,13 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             _,
             _,
         ) = get_bold_brainmask_source_files(bold_wholebrain)
-        wholebrain_bold_brainmask_derivatives_wf = (
-            init_bold_brainmask_derivatives_wf(
-                DERIV_DIR,
-                source_brain,
-                source_brainmask,
-                "wholebrain",
-                out_path_base=BRAINMASK_DIR.split("/")[-1],
-                name="wholebrain_bold_brainmask_derivatives_wf",
-            )
+        wholebrain_bold_brainmask_derivatives_wf = init_bold_brainmask_derivatives_wf(
+            DERIV_DIR,
+            source_brain,
+            source_brainmask,
+            "wholebrain",
+            out_path_base=BRAINMASK_DIR.split("/")[-1],
+            name="wholebrain_bold_brainmask_derivatives_wf",
         )
 
         # connect
@@ -875,10 +821,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             apply fmap to wholebrain bold workflows
             """
             # register fmap to wholebrain bold
-            fmap_to_wholebrain_bold_wf = (
-                init_fmap_to_wholebrain_bold_wf(
-                    name="reg_fmap_to_wholebrain_bold_wf"
-                )
+            fmap_to_wholebrain_bold_wf = init_fmap_to_wholebrain_bold_wf(
+                name="reg_fmap_to_wholebrain_bold_wf"
             )
             # apply sdc to wholebrain bold
             wholebrain_bold_unwarp_wf = init_bold_sdc_wf(
@@ -886,8 +830,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 fmap_metadata=layout.get_metadata(phasediff),
                 name="wholebrain_bold_unwarp_wf",
             )
-            wholebrain_bold_unwarp_wf.inputs.inputnode.bold_metadata = layout.get_metadata(
-                bold_wholebrain
+            wholebrain_bold_unwarp_wf.inputs.inputnode.bold_metadata = (
+                layout.get_metadata(bold_wholebrain)
             )
 
             # connect
@@ -1033,29 +977,19 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 source_preproc_wholebrain_bold["sub_id"],
                 source_preproc_wholebrain_bold["ses_id"],
                 source_preproc_wholebrain_bold["bold_ref"],
-                source_preproc_wholebrain_bold[
-                    "wholebrain_bold_to_t1_mat"
-                ],
-                source_preproc_wholebrain_bold[
-                    "wholebrain_bold_to_t1_svg"
-                ],
+                source_preproc_wholebrain_bold["wholebrain_bold_to_t1_mat"],
+                source_preproc_wholebrain_bold["wholebrain_bold_to_t1_svg"],
                 source_preproc_wholebrain_bold["distorted_boldref"],
                 source_preproc_wholebrain_bold["distorted_brainmask"],
                 source_preproc_wholebrain_bold["distorted_dseg"],
-                source_preproc_wholebrain_bold[
-                    "distorted_itk_bold_to_t1"
-                ],
-                source_preproc_wholebrain_bold[
-                    "distorted_itk_t1_to_bold"
-                ],
+                source_preproc_wholebrain_bold["distorted_itk_bold_to_t1"],
+                source_preproc_wholebrain_bold["distorted_itk_t1_to_bold"],
                 source_preproc_wholebrain_bold["proc_itk_bold_to_t1"],
                 source_preproc_wholebrain_bold["proc_itk_t1_to_bold"],
                 source_preproc_wholebrain_bold["proc_fsl_bold_to_t1"],
                 source_preproc_wholebrain_bold["proc_fsl_t1_to_bold"],
                 source_preproc_wholebrain_bold["proc_dseg"],
-                source_preproc_wholebrain_bold[
-                    "proc_spacet1_boldref"
-                ],
+                source_preproc_wholebrain_bold["proc_spacet1_boldref"],
                 source_preproc_wholebrain_bold["proc_boldref"],
                 use_fmaps=use_fmaps,
                 workflow_name_base="wholebrain_bold",
@@ -1212,10 +1146,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
     """
     # get output names for all wholebrain bold related files
     slabref_bold = BOLD_SLAB_PATHS[0]
-    source_preproc_slabref_bold = (
-        get_slab_reference_bold_preproc_source_files(
-            slabref_bold, use_fmaps=use_fmaps
-        )
+    source_preproc_slabref_bold = get_slab_reference_bold_preproc_source_files(
+        slabref_bold, use_fmaps=use_fmaps
     )
     # slabref_bold_buffer
     slabref_bold_buffer = pe.Node(
@@ -1273,18 +1205,14 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             _,
             _,
             _,
-        ) = get_bold_brainmask_source_files(
-            slabref_bold, slabref=True
-        )
-        slabref_bold_brainmask_derivatives_wf = (
-            init_bold_brainmask_derivatives_wf(
-                DERIV_DIR,
-                source_brain,
-                source_brainmask,
-                "slab_bold_reference",
-                out_path_base=BRAINMASK_DIR.split("/")[-1],
-                name="slab_reference_brainmask_derivatives_wf",
-            )
+        ) = get_bold_brainmask_source_files(slabref_bold, slabref=True)
+        slabref_bold_brainmask_derivatives_wf = init_bold_brainmask_derivatives_wf(
+            DERIV_DIR,
+            source_brain,
+            source_brainmask,
+            "slab_bold_reference",
+            out_path_base=BRAINMASK_DIR.split("/")[-1],
+            name="slab_reference_brainmask_derivatives_wf",
         )
         # connect
         wf.connect(
@@ -1341,9 +1269,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 fmap_metadata=layout.get_metadata(phasediff),
                 name="slab_reference_unwarp_wf",
             )
-            slabref_bold_unwarp_wf.inputs.inputnode.bold_metadata = (
-                slabref_metadata
-            )
+            slabref_bold_unwarp_wf.inputs.inputnode.bold_metadata = slabref_metadata
 
             wf.connect(
                 [
@@ -1416,12 +1342,10 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         """
         register sdc-corrected slab bold to sdc-corrected wholebrain bold
         """
-        slabref_bold_to_wholebrain_bold_wf = (
-            init_slab_bold_to_wholebrain_bold_wf(
-                bold2t1w_dof=args.reg_slab_to_wholebrain_dof,
-                use_bbr=args.reg_slab_to_wholebrain_bbr,
-                name="reg_slab_reference_to_wholebrain_bold_wf",
-            )
+        slabref_bold_to_wholebrain_bold_wf = init_slab_bold_to_wholebrain_bold_wf(
+            bold2t1w_dof=args.reg_slab_to_wholebrain_dof,
+            use_bbr=args.reg_slab_to_wholebrain_bbr,
+            name="reg_slab_reference_to_wholebrain_bold_wf",
         )
         if use_fmaps:
             # Use undistorted bold to estimate slab to wholebrain epi transformation
@@ -1540,32 +1464,16 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 DERIV_DIR,
                 source_preproc_slabref_bold["sub_id"],
                 source_preproc_slabref_bold["ses_id"],
-                source_preproc_slabref_bold[
-                    "slabref_to_wholebrain_bold_mat"
-                ],
-                source_preproc_slabref_bold[
-                    "slabref_to_wholebrain_bold_svg"
-                ],
+                source_preproc_slabref_bold["slabref_to_wholebrain_bold_mat"],
+                source_preproc_slabref_bold["slabref_to_wholebrain_bold_svg"],
                 source_preproc_slabref_bold["distorted_boldref"],
                 source_preproc_slabref_bold["distorted_brainmask"],
-                source_preproc_slabref_bold[
-                    "distorted_itk_slabref_to_wholebrain_bold"
-                ],
-                source_preproc_slabref_bold[
-                    "distorted_itk_wholebrain_to_slabref_bold"
-                ],
-                source_preproc_slabref_bold[
-                    "proc_itk_slabref_to_wholebrain_bold"
-                ],
-                source_preproc_slabref_bold[
-                    "proc_itk_wholebrain_to_slabref_bold"
-                ],
-                source_preproc_slabref_bold[
-                    "proc_fsl_slabref_to_wholebrain_bold"
-                ],
-                source_preproc_slabref_bold[
-                    "proc_fsl_wholebrain_to_slabref_bold"
-                ],
+                source_preproc_slabref_bold["distorted_itk_slabref_to_wholebrain_bold"],
+                source_preproc_slabref_bold["distorted_itk_wholebrain_to_slabref_bold"],
+                source_preproc_slabref_bold["proc_itk_slabref_to_wholebrain_bold"],
+                source_preproc_slabref_bold["proc_itk_wholebrain_to_slabref_bold"],
+                source_preproc_slabref_bold["proc_fsl_slabref_to_wholebrain_bold"],
+                source_preproc_slabref_bold["proc_fsl_wholebrain_to_slabref_bold"],
                 source_preproc_slabref_bold["proc_boldref"],
                 use_fmaps=use_fmaps,
                 workflow_name_base="slabref_bold",
@@ -1720,11 +1628,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         """
         check if file `bold_slab` is processed and not selected, otherwise skip
         """
-        if (
-            processed_flag
-            or not select_task_flag
-            or not select_run_flag
-        ):
+        if processed_flag or not select_task_flag or not select_run_flag:
             continue
 
         """
@@ -1732,12 +1636,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         """
         # workflow labels
         bold_slab_rel_path = bold_slab.split("/")[-1]
-        task = bold_slab_rel_path[
-            bold_slab_rel_path.find("task-") :
-        ].split("_")[0]
-        run = bold_slab_rel_path[
-            bold_slab_rel_path.find("run-") :
-        ].split("_")[0]
+        task = bold_slab_rel_path[bold_slab_rel_path.find("task-") :].split("_")[0]
+        run = bold_slab_rel_path[bold_slab_rel_path.find("run-") :].split("_")[0]
         bold_slab_base = f"slab_bold_{task}_{run}"
         # get metadata
         metadata = layout.get_metadata(bold_slab)
@@ -1757,9 +1657,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         - head-motion correction (hmc)
         """
         # stc
-        assert bool(
-            metadata["SliceTiming"]
-        ), "SliceTiming metadata is unavailable."
+        assert bool(metadata["SliceTiming"]), "SliceTiming metadata is unavailable."
         slab_bold_stc_wf = init_bold_stc_wf(
             metadata=metadata, name=f"{bold_slab_base}_stc_wf"
         )
@@ -1897,9 +1795,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             slab_bold_quick=args.slab_bold_quick,
             name=f"trans_{bold_slab_base}_to_t1_wf",
         )
-        trans_slab_bold_to_anat_wf.inputs.inputnode.bold_metadata = (
-            metadata
-        )
+        trans_slab_bold_to_anat_wf.inputs.inputnode.bold_metadata = metadata
 
         if use_fmaps:
             NotImplemented
@@ -2087,37 +1983,29 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         """
         save slab preproc bold data to derivative directories
         """
-        source_preproc_slab_bold = get_slab_bold_preproc_source_files(
-            bold_slab
-        )
-        slab_bold_preproc_derivatives_wf = (
-            init_slab_bold_preproc_derivatives_wf(
-                DERIV_DIR,
-                source_preproc_slab_bold["sub_id"],
-                source_preproc_slab_bold["ses_id"],
-                source_preproc_slab_bold["bold_ref"],
-                source_preproc_slab_bold["bold_brainmask"],
-                source_preproc_slab_bold["bold_preproc"],
-                source_preproc_slab_bold["bold_confounds"],
-                source_preproc_slab_bold["bold_roi_svg"],
-                source_preproc_slab_bold["bold_acompcor_csf"],
-                source_preproc_slab_bold["bold_acompcor_wm"],
-                source_preproc_slab_bold["bold_acompcor_wmcsf"],
-                source_preproc_slab_bold["bold_tcompcor"],
-                source_preproc_slab_bold["bold_crownmask"],
-                source_preproc_slab_bold["bold_hmc"],
-                source_preproc_slab_bold["bold_sdc_warp"],
-                source_preproc_slab_bold[
-                    "slab_bold_to_slabref_bold_mat"
-                ],
-                source_preproc_slab_bold[
-                    "slab_bold_to_slabref_bold_svg"
-                ],
-                source_preproc_slab_bold["slab_bold_to_t1_warp"],
-                bold_slab_base,
-                use_fmaps=use_fmaps,
-                out_path_base=BOLD_PREPROC_DIR.split("/")[-1],
-            )
+        source_preproc_slab_bold = get_slab_bold_preproc_source_files(bold_slab)
+        slab_bold_preproc_derivatives_wf = init_slab_bold_preproc_derivatives_wf(
+            DERIV_DIR,
+            source_preproc_slab_bold["sub_id"],
+            source_preproc_slab_bold["ses_id"],
+            source_preproc_slab_bold["bold_ref"],
+            source_preproc_slab_bold["bold_brainmask"],
+            source_preproc_slab_bold["bold_preproc"],
+            source_preproc_slab_bold["bold_confounds"],
+            source_preproc_slab_bold["bold_roi_svg"],
+            source_preproc_slab_bold["bold_acompcor_csf"],
+            source_preproc_slab_bold["bold_acompcor_wm"],
+            source_preproc_slab_bold["bold_acompcor_wmcsf"],
+            source_preproc_slab_bold["bold_tcompcor"],
+            source_preproc_slab_bold["bold_crownmask"],
+            source_preproc_slab_bold["bold_hmc"],
+            source_preproc_slab_bold["bold_sdc_warp"],
+            source_preproc_slab_bold["slab_bold_to_slabref_bold_mat"],
+            source_preproc_slab_bold["slab_bold_to_slabref_bold_svg"],
+            source_preproc_slab_bold["slab_bold_to_t1_warp"],
+            bold_slab_base,
+            use_fmaps=use_fmaps,
+            out_path_base=BOLD_PREPROC_DIR.split("/")[-1],
         )
 
         if use_fmaps:

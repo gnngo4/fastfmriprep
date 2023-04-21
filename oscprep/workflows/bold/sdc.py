@@ -33,9 +33,7 @@ def init_bold_sdc_wf(
     )
 
     outputnode = pe.Node(
-        niu.IdentityInterface(
-            fields=["sdc_warp", "undistorted_bold"]
-        ),
+        niu.IdentityInterface(fields=["sdc_warp", "undistorted_bold"]),
         name="outputnode",
     )
 

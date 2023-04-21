@@ -31,9 +31,7 @@ def _LowPassFilterBold(bold_path, repetition_time, lp=0.2):
 
 class LowPassFilterBoldInputSpec(TraitedSpec):
     bold_path = File(exists=True, desc="bold path", mandatory=True)
-    repetition_time = traits.Float(
-        desc="repetition time (TR)", mandatory=True
-    )
+    repetition_time = traits.Float(desc="repetition time (TR)", mandatory=True)
     low_pass_threshold = traits.Float(
         desc="lowpass filtering threshold", mandatory=True
     )
