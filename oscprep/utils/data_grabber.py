@@ -100,6 +100,8 @@ class bids_reader:
                 bold for bold in func_list if "part-phase" not in bold
             ]
 
+        self._check_str_in_list(func_list, '_dir-')
+
         if full_path_flag:
             return [f"{func_dir}/{i}" for i in func_list]
         else:
@@ -160,4 +162,9 @@ class bids_reader:
 
         assert len(t1w_list) != 0, "No T1w acquisitions were found."
 
-        return t1w_list[0]
+        return t1w_list[-1]
+    
+    def _check_str_in_list(self, str_list, _str):
+
+        for s in str_list:
+            assert _str in s, f"{s} does not contain {_str}."

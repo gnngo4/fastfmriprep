@@ -2,6 +2,7 @@ def run():
     import os
     import sys
     from datetime import datetime
+    from collections import Counter
 
     from niworkflows.engine.workflows import (
         LiterateWorkflow as Workflow,
@@ -134,24 +135,6 @@ def run():
         .split(BIDS_DIR)[1]
         .split("/")[1:3]
     )
-    # get wholebrain bold info
-    BOLD_WHOLEBRAIN_PATHS = bids_util.get_bold_list(
-        SUBJECT_ID,
-        SESSION_ID,
-        specific_task="wholebrain",
-        full_path_flag=True,
-        suffix="bold.nii.gz",
-    )
-    BOLD_WHOLEBRAIN_PATHS.sort()
-    if not len(BOLD_WHOLEBRAIN_PATHS) == 1:
-        print(
-            "WARNING: There are more than 1 wholebrain bold"
-            f" images.\n{BOLD_WHOLEBRAIN_PATHS}"
-        )
-        bold_wholebrain = BOLD_WHOLEBRAIN_PATHS[-1]
-    else:
-        bold_wholebrain = BOLD_WHOLEBRAIN_PATHS[0]
-
     # get slab bold info
     NON_SLAB_TASKS = ["reversephase", "wholebrain", "None"]
     BOLD_SLAB_PATHS = bids_util.get_bold_list(
@@ -218,6 +201,30 @@ def run():
         if f"_run-{args.select_run}_" in bold_slab:
             run_flag = True
         BOLD_SLAB_PATHS_SELECT_RUN.append(run_flag)
+    # get most common direction from `BOLD_SLAB_PATHS`
+    most_common_pe_dir = Counter([i.split('_dir-')[1].split('_')[0] for i in BOLD_SLAB_PATHS]).most_common()[0][0]
+    # get wholebrain bold info
+    BOLD_WHOLEBRAIN_PATHS = bids_util.get_bold_list(
+        SUBJECT_ID,
+        SESSION_ID,
+        specific_task="wholebrain",
+        full_path_flag=True,
+        suffix="bold.nii.gz",
+    )
+    BOLD_WHOLEBRAIN_PATHS.sort()
+    n_wholebrain_bold_scans = len(BOLD_WHOLEBRAIN_PATHS)
+    if n_wholebrain_bold_scans == 1:
+        bold_wholebrain = BOLD_WHOLEBRAIN_PATHS[0]
+    elif n_wholebrain_bold_scans > 1:
+        print(
+            "WARNING: There are more than 1 wholebrain bold"
+            f" images.\n{BOLD_WHOLEBRAIN_PATHS}"
+        )
+        FILTERED_BOLD_WHOLEBRAIN_PATHS = [i for i in BOLD_WHOLEBRAIN_PATHS if f"_dir-{most_common_pe_dir}_" in i]
+        assert len(FILTERED_BOLD_WHOLEBRAIN_PATHS) > 0, f"No wholebrain bold scans have phase encoding direction of dir-{most_common_pe_dir}"
+        bold_wholebrain = FILTERED_BOLD_WHOLEBRAIN_PATHS[-1]
+    else:
+        raise ValueError(f"Value cannot be zero\nNumber of detected wholebrain bold scans: {n_wholebrain_bold_scans}")
 
     """
     Workflow flags
