@@ -109,6 +109,7 @@ RUN apt-get update -y && apt upgrade -y && \
         -name "fast" -or \
         -name "flirt" -or \
         -name "fsl_regfilt" -or \
+        -name "fsl_prepare_fieldmap" -or \
         -name "fslhd" -or \
         -name "fslinfo" -or \
         -name "fslmaths" -or \
@@ -116,9 +117,12 @@ RUN apt-get update -y && apt upgrade -y && \
         -name "fslroi" -or \
         -name "fslsplit" -or \
         -name "fslstats" -or \
+        -name "fslval" -or \
+        -name "fugue" -or \
         -name "imtest" -or \
         -name "mcflirt" -or \
         -name "melodic" -or \
+        -name "prelude" -or \
         -name "remove_ext" -or \
         -name "susan" -or \
         -name "zeropad" \) -delete \
