@@ -329,8 +329,10 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 "t1w_tpms",  # anat_preproc_wf | t1w_tpms
                 "subjects_dir",  # anat_preproc_wf | subjects_dir
                 "subject_id",  # anat_preproc_wf | subject_id
+                "t1w2fsnative_xfm",  # anat_preproc_wf | t1w2fsnative_xfm
                 "fsnative2t1w_xfm",  # anat_preproc_wf | fsnative2t1w_xfm
                 "std2anat_xfm",  # anat_preproc_wf | std2anat_xfm
+                "anat_ribbon",  # anat_preproc_wf | anat_ribbon
             ]
         ),
         name="anat_smriprep_buffer",
@@ -483,12 +485,14 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             (anat_preproc_wf, anat_buffer, [
                 ("outputnode.subject_id", "subject_id"),
                 ("outputnode.subjects_dir", "subjects_dir"),
+                ("outputnode.t1w2fsnative_xfm", "t1w2fsnative_xfm"),
                 ("outputnode.fsnative2t1w_xfm", "fsnative2t1w_xfm"),
                 ("outputnode.t1w_preproc", "fs_t1w_brain"),
                 ("outputnode.t1w_mask", "t1w_brainmask"),
                 ("outputnode.t1w_dseg", "t1w_dseg"),
                 ("outputnode.t1w_tpms", "t1w_tpms"),
                 ("outputnode.std2anat_xfm", "std2anat_xfm"),
+                ("outputnode.anat_ribbon", "anat_ribbon"),
             ]),
         ])
         # fmt: on
@@ -498,6 +502,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         anat_inputs = {
             "subject_id": f"sub-{SUBJECT_ID}",
             "subjects_dir": FREESURFER_DIR,
+            "t1w2fsnative_xfm": f"{anat_preproc_base}_from-T1w_to-fsnative_mode-image_xfm.txt",
             "fsnative2t1w_xfm": f"{anat_preproc_base}_from-fsnative_to-T1w_mode-image_xfm.txt",
             "fs_t1w_brain": (f"{anat_preproc_base}_desc-preproc_T1w.nii.gz"),
             "t1w_brainmask": (f"{anat_preproc_base}_desc-brain_mask.nii.gz"),
@@ -508,6 +513,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 f"{anat_preproc_base}_label-CSF_desc-brain_probseg.nii.gz",
             ],
             "std2anat_xfm": f"{anat_preproc_base}_from-MNI152NLin2009cAsym_to-T1w_mode-image_xfm.h5",
+            "anat_ribbon": f"{anat_preproc_base}_desc-ribbon_mask.nii.gz",
         }
 
         # set anat_buffer inputs
@@ -1295,6 +1301,115 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         # fmt: on
 
         """
+        CIFTI resampling
+        """
+        from fmriprep.workflows.bold.resampling import init_bold_grayords_wf
+        from fmriprep.workflows.bold.resampling import init_bold_surf_wf
+
+        from pathlib import Path
+        from templateflow import api as tflow
+        from nipype.interfaces.ants import RegistrationSynQuick
+        from nipype.interfaces.utility import Function
+        from nipype.interfaces.ants import ApplyTransforms
+
+        # Resample BOLD to freesurfer surface
+        slab_bold_surf_wf = init_bold_surf_wf(
+            mem_gb=8,
+            surface_spaces=["fsaverage"],
+            medial_surface_nan=None,
+            project_goodvoxels=False,
+            name=f"{bold_slab_base}_surf_wf",
+        )
+        # fmt: off
+        wf.connect([
+            (anat_buffer, slab_bold_surf_wf, [
+                ("subjects_dir", "inputnode.subjects_dir"),
+                ("subject_id", "inputnode.subject_id"),
+                ("t1w2fsnative_xfm", "inputnode.t1w2fsnative_xfm"),
+                ("anat_ribbon", "inputnode.anat_ribbon"),
+                ("t1w_brainmask", "inputnode.t1w_mask"),
+            ]),
+            (trans_slab_bold_to_anat_wf, slab_bold_surf_wf, [("outputnode.t1_space_bold", "inputnode.source_file")])
+        ])
+        # fmt: on
+
+        # Estimate transform (T1w->MNI152NLin6Asym)
+        standard_space = "MNI152NLin6Asym"
+        template_img = tflow.get(
+            standard_space, resolution=2, desc=None, suffix="T1w", extension="nii.gz"
+        )
+        trans_slab_bold_to_std_est_wf = pe.Node(
+            RegistrationSynQuick(), name=f"{bold_slab_base}_boldt1w_to_std_estimate"
+        )
+        trans_slab_bold_to_std_est_wf.inputs.fixed_image = template_img
+        # fmt: off
+        wf.connect([
+            (anat_buffer, trans_slab_bold_to_std_est_wf, [("fs_t1w_brain","moving_image")])
+        ])
+        # fmt: on
+
+        # Combine transforms into a list (linear affine + nonlinear warp)
+        def combine_xfms(xfm1, xfm2):
+            return [xfm2, xfm1]
+
+        combine_xfms_wf = pe.Node(
+            Function(
+                input_names=["xfm1", "xfm2"],
+                output_names=["output"],
+                function=combine_xfms,
+            ),
+            name=f"{bold_slab_base}_boldt1w_to_std_combine_xfms",
+        )
+        # fmt: off
+        wf.connect([
+            (trans_slab_bold_to_std_est_wf, combine_xfms_wf, [
+                ("out_matrix","xfm1"),
+                ("forward_warp_field","xfm2")
+            ])
+        ])
+        # fmt: on
+
+        # Apply transform (T1w->MNI152NLin6Asym) to bold
+        trans_slab_bold_to_std_apply_wf = pe.Node(
+            ApplyTransforms(
+                reference_image=template_img,
+                interpolation="LanczosWindowedSinc",
+                input_image_type=3,
+                output_image=f"space-{standard_space}_bold.nii.gz",
+            ),
+            name=f"{bold_slab_base}_boldt1w_to_std_apply",
+        )
+        # fmt: off
+        wf.connect([
+            (trans_slab_bold_to_anat_wf, trans_slab_bold_to_std_apply_wf, [("outputnode.t1_space_bold", "input_image")]),
+            (combine_xfms_wf, trans_slab_bold_to_std_apply_wf, [("output", "transforms")])
+        ])
+        # fmt: on
+
+        # Resample bold to 32k grayordinate space
+        mni_out_bold = Path(
+            f"{args.scratch_dir}/oscprep_sub-{SUBJECT_ID}_session-{SESSION_ID}_{workflow_suffix}v{_OSCPREP_VERSION}/{bold_slab_base}_boldt1w_to_std_apply/space-{standard_space}_bold.nii.gz"
+        )
+        slab_bold_grayords_wf = init_bold_grayords_wf(
+            grayord_density="91k",
+            mem_gb=8,
+            repetition_time=metadata["RepetitionTime"],
+            name=f"{bold_slab_base}_grayords_wf",
+        )
+        slab_bold_grayords_wf.inputs.inputnode.bold_std = [mni_out_bold]
+        slab_bold_grayords_wf.inputs.inputnode.spatial_reference = (
+            f"{standard_space}_res-2"
+        )
+        # fmt: off
+        wf.connect([
+            (slab_bold_surf_wf, slab_bold_grayords_wf, [
+                ("outputnode.surfaces", "inputnode.surf_files"),
+                ("outputnode.target", "inputnode.surf_refs"),
+            ])
+        ])
+        # fmt: on
+
+        """
         save slab preproc bold data to derivative directories
         """
         source_preproc_slab_bold = get_slab_bold_preproc_source_files(bold_slab)
@@ -1305,6 +1420,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             source_preproc_slab_bold["bold_ref"],
             source_preproc_slab_bold["bold_brainmask"],
             source_preproc_slab_bold["bold_preproc"],
+            source_preproc_slab_bold["cifti_bold_preproc"],
+            source_preproc_slab_bold["cifti_bold_metadata"],
             source_preproc_slab_bold["bold_confounds"],
             source_preproc_slab_bold["bold_roi_svg"],
             source_preproc_slab_bold["bold_acompcor_csf"],
@@ -1349,14 +1466,16 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 ("outputnode.crown_mask", "inputnode.bold_crownmask"),
                 ("outputnode.rois_plot", "inputnode.bold_roi_svg")
             ]),
-            (slab_bold_hmc_wf, slab_bold_preproc_derivatives_wf, [
-                ("outputnode.fsl_affines", "inputnode.bold_hmc")
-            ]),
+            (slab_bold_hmc_wf, slab_bold_preproc_derivatives_wf, [("outputnode.fsl_affines", "inputnode.bold_hmc")]),
             (slab_to_slabref_bold_wf, slab_bold_preproc_derivatives_wf, [
                 ("outputnode.fsl_slab_to_slabref_bold", "inputnode.slab_bold_to_slabref_bold_mat"),
                 ("outputnode.out_report", "inputnode.slab_bold_to_slabref_bold_svg"),
             ]),
             (merge_transforms_wf, slab_bold_preproc_derivatives_wf, [("outputnode.slab2anat_warp", "inputnode.slab_bold_to_t1_warp")]),
+            (slab_bold_grayords_wf, slab_bold_preproc_derivatives_wf, [
+                ("outputnode.cifti_bold", "inputnode.cifti_bold_preproc"),
+                ("outputnode.cifti_metadata", "inputnode.cifti_bold_metadata")
+            ])
         ])
         # fmt: on
 

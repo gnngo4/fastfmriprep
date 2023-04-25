@@ -632,6 +632,8 @@ def init_slab_bold_preproc_derivatives_wf(
     bold_ref_base,
     bold_brainmask_base,
     bold_preproc_base,
+    cifti_bold_preproc_base,
+    cifti_bold_metadata_base,
     bold_confounds_base,
     bold_roi_svg_base,
     bold_acompcor_csf_base,
@@ -665,6 +667,8 @@ def init_slab_bold_preproc_derivatives_wf(
                 "bold_ref",
                 "bold_brainmask",
                 "bold_preproc",
+                "cifti_bold_preproc",
+                "cifti_bold_metadata",
                 "bold_confounds",
                 "bold_roi_svg",
                 "bold_acompcor_csf",
@@ -728,6 +732,28 @@ def init_slab_bold_preproc_derivatives_wf(
         run_without_submitting=True,
     )
     ds_bold_preproc.inputs.source_file = f"{output_dir}/{bold_preproc_base}"
+
+    # Preprocessed bold resampled to 32k avg surface space
+    ds_cifti_bold_preproc = pe.Node(
+        ExportFile(
+            out_file=(f"{output_dir}/{out_path_base}/{cifti_bold_preproc_base}"),
+            check_extension=False,
+            clobber=True,
+        ),
+        name=f"ds_{workflow_name_base}_cifti_bold_preproc",
+        run_without_submitting=True,
+    )
+
+    # Preprocessed bold resampled to 32k avg surface space [metadata]
+    ds_cifti_bold_metadata = pe.Node(
+        ExportFile(
+            out_file=(f"{output_dir}/{out_path_base}/{cifti_bold_metadata_base}"),
+            check_extension=False,
+            clobber=True,
+        ),
+        name=f"ds_{workflow_name_base}_cifti_bold_metadata",
+        run_without_submitting=True,
+    )
 
     """
     Confound files
@@ -850,6 +876,16 @@ def init_slab_bold_preproc_derivatives_wf(
                 inputnode,
                 ds_bold_preproc,
                 [("bold_preproc", "in_file")],
+            ),
+            (
+                inputnode,
+                ds_cifti_bold_preproc,
+                [("cifti_bold_preproc", "in_file")],
+            ),
+            (
+                inputnode,
+                ds_cifti_bold_metadata,
+                [("cifti_bold_metadata", "in_file")],
             ),
             (inputnode, ds_bold_hmc, [("bold_hmc", "hmc_list")]),
             (

@@ -128,6 +128,9 @@ def get_slab_bold_preproc_source_files(bold_path):
     bold_ref = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','space-T1w_boldref.nii.gz')}"
     bold_brainmask = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','space-T1w_desc-boldref_brainmask.nii.gz')}"
     bold_preproc = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','space-T1w_desc-preproc_bold.nii.gz')}"
+    # cifti bold
+    cifti_bold_preproc = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-preproc_bold.dtseries.nii')}"
+    cifti_bold_metadata = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-preproc_bold.json')}"
     # confounds
     bold_confounds = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-confounds_timeseries.tsv')}"
     # rois
@@ -151,6 +154,8 @@ def get_slab_bold_preproc_source_files(bold_path):
         "bold_ref": bold_ref,
         "bold_brainmask": bold_brainmask,
         "bold_preproc": bold_preproc,
+        "cifti_bold_preproc": cifti_bold_preproc,
+        "cifti_bold_metadata": cifti_bold_metadata,
         "bold_confounds": bold_confounds,
         "bold_roi_svg": bold_roi_svg,
         "bold_acompcor_csf": bold_acompcor_csf,
