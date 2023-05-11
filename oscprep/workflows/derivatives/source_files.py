@@ -133,6 +133,7 @@ def get_slab_bold_preproc_source_files(bold_path):
     cifti_bold_metadata = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-preproc_bold.json')}"
     # confounds
     bold_confounds = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-confounds_timeseries.tsv')}"
+    bold_confounds_metadata = f"{sub_id}/{ses_id}/func/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-confounds_timeseries.json')}"
     # rois
     bold_roi_svg = f"{sub_id}/{ses_id}/figures/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-confound_roi.svg')}"
     bold_acompcor_csf = f"{sub_id}/{ses_id}/roi/{bold_path.split('/')[-1].replace('part-mag_bold.nii.gz','desc-confound_roi-csf_aCompCor.nii.gz')}"
@@ -157,6 +158,7 @@ def get_slab_bold_preproc_source_files(bold_path):
         "cifti_bold_preproc": cifti_bold_preproc,
         "cifti_bold_metadata": cifti_bold_metadata,
         "bold_confounds": bold_confounds,
+        "bold_confounds_metadata": bold_confounds_metadata,
         "bold_roi_svg": bold_roi_svg,
         "bold_acompcor_csf": bold_acompcor_csf,
         "bold_acompcor_wm": bold_acompcor_wm,

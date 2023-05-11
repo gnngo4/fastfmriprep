@@ -1423,6 +1423,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             source_preproc_slab_bold["cifti_bold_preproc"],
             source_preproc_slab_bold["cifti_bold_metadata"],
             source_preproc_slab_bold["bold_confounds"],
+            source_preproc_slab_bold["bold_confounds_metadata"],
             source_preproc_slab_bold["bold_roi_svg"],
             source_preproc_slab_bold["bold_acompcor_csf"],
             source_preproc_slab_bold["bold_acompcor_wm"],
@@ -1459,6 +1460,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             ]),
             (slab_bold_confs_wf, slab_bold_preproc_derivatives_wf, [
                 ("outputnode.confounds_file", "inputnode.bold_confounds"),
+                (("outputnode.confounds_metadata", _jsonify), "inputnode.bold_confounds_metadata"),
                 (("outputnode.acompcor_masks", _get_element, 0), "inputnode.bold_acompcor_csf"),
                 (("outputnode.acompcor_masks", _get_element, 1), "inputnode.bold_acompcor_wm"),
                 (("outputnode.acompcor_masks", _get_element, 2), "inputnode.bold_acompcor_wmcsf"),
@@ -1484,6 +1486,18 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
 
 def _get_element(_list, element_idx):
     return _list[element_idx]
+
+
+def _jsonify(_dict):
+    import json
+    import os
+
+    filename = "/tmp/confounds_metadata.json"
+
+    with open(filename, "w") as f:
+        json.dump(_dict, f)
+
+    return filename
 
 
 if __name__ == "__main__":

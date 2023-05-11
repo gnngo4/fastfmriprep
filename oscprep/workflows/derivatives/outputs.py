@@ -635,6 +635,7 @@ def init_slab_bold_preproc_derivatives_wf(
     cifti_bold_preproc_base,
     cifti_bold_metadata_base,
     bold_confounds_base,
+    bold_confounds_metadata_base,
     bold_roi_svg_base,
     bold_acompcor_csf_base,
     bold_acompcor_wm_base,
@@ -670,6 +671,7 @@ def init_slab_bold_preproc_derivatives_wf(
                 "cifti_bold_preproc",
                 "cifti_bold_metadata",
                 "bold_confounds",
+                "bold_confounds_metadata",
                 "bold_roi_svg",
                 "bold_acompcor_csf",
                 "bold_acompcor_wm",
@@ -765,6 +767,15 @@ def init_slab_bold_preproc_derivatives_wf(
             clobber=True,
         ),
         name=f"ds_{workflow_name_base}_bold_confounds",
+        run_without_submitting=True,
+    )
+    ds_bold_confounds_metadata = pe.Node(
+        ExportFile(
+            out_file=(f"{output_dir}/{out_path_base}/{bold_confounds_metadata_base}"),
+            check_extension=False,
+            clobber=True,
+        ),
+        name=f"ds_{workflow_name_base}_bold_confounds_metadata",
         run_without_submitting=True,
     )
     ds_bold_roi_svg = pe.Node(
@@ -892,6 +903,11 @@ def init_slab_bold_preproc_derivatives_wf(
                 inputnode,
                 ds_bold_confounds,
                 [("bold_confounds", "in_file")],
+            ),
+            (
+                inputnode,
+                ds_bold_confounds_metadata,
+                [("bold_confounds_metadata", "in_file")],
             ),
             (
                 inputnode,
