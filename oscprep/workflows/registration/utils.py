@@ -128,66 +128,30 @@ def init_fsl_merge_transforms_wf(use_fmaps, name="fsl_merge_transforms_wf"):
     slab2anat_warp = pe.Node(fsl.ConvertWarp(), name="slab2anat_warp")
 
     # Connect
-    workflow.connect(
-        [
-            (
-                inputnode,
-                slab2wholebrain_aff,
-                [
-                    ("slabref2wholebrain_aff", "in_file2"),
-                    ("slab2slabref_aff", "in_file"),
-                ],
-            ),
-            (
-                inputnode,
-                slab2anat_aff,
-                [
-                    ("wholebrain2anat_aff", "in_file2"),
-                ],
-            ),
-            (
-                slab2wholebrain_aff,
-                slab2anat_aff,
-                [
-                    ("out_file", "in_file"),
-                ],
-            ),
-            (
-                inputnode,
-                gen_ref,
-                [
-                    ("source", "moving_image"),
-                    ("reference", "fixed_image"),
-                ],
-            ),
-            (gen_ref, slab2anat_warp, [("out_file", "reference")]),
-            (
-                slab2anat_aff,
-                slab2anat_warp,
-                [("out_file", "postmat")],
-            ),
-            (
-                gen_ref,
-                outputnode,
-                [("out_file", "reference_resampled")],
-            ),
-            (
-                slab2anat_warp,
-                outputnode,
-                [("out_file", "slab2anat_warp")],
-            ),
-        ]
-    )
+    # fmt: off
+    workflow.connect([
+        (inputnode, slab2wholebrain_aff, [
+            ("slabref2wholebrain_aff", "in_file2"),
+            ("slab2slabref_aff", "in_file"),
+        ]),
+        (inputnode, slab2anat_aff, [("wholebrain2anat_aff", "in_file2")]),
+        (slab2wholebrain_aff, slab2anat_aff, [("out_file", "in_file")]),
+        (inputnode, gen_ref, [
+            ("source", "moving_image"),
+            ("reference", "fixed_image"),
+        ]),
+        (gen_ref, slab2anat_warp, [("out_file", "reference")]),
+        (slab2anat_aff, slab2anat_warp, [("out_file", "postmat")]),
+        (gen_ref, outputnode, [("out_file", "reference_resampled")]),
+        (slab2anat_warp, outputnode, [("out_file", "slab2anat_warp")])
+    ])
+    # fmt: on
 
     if use_fmaps:
-        workflow.connect(
-            [
-                (
-                    inputnode,
-                    slab2anat_warp,
-                    [("slab_sdc_warp", "warp1")],
-                ),
-            ]
-        )
+        # fmt: off
+        workflow.connect([
+            (inputnode, slab2anat_warp, [("slab_sdc_warp", "warp1")])
+        ])
+        # fmt: on
 
     return workflow

@@ -1249,7 +1249,8 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             (slabref_bold_buffer, merge_transforms_wf, [("proc_fsl_slabref_to_wholebrain_bold", "inputnode.slabref2wholebrain_aff")]),
             (wholebrain_bold_buffer, merge_transforms_wf, [("proc_fsl_bold_to_t1", "inputnode.wholebrain2anat_aff")]),
             (anat_buffer, merge_transforms_wf, [("fs_t1w_brain", "inputnode.reference")]),
-            (slab_bold_ref_wf, merge_transforms_wf, [("outputnode.boldref", "inputnode.source")]),
+            (wholebrain_bold_buffer, merge_transforms_wf, [("distorted_boldref", "inputnode.source")]),
+            #(slab_bold_ref_wf, merge_transforms_wf, [("outputnode.boldref", "inputnode.source")]), # NEEDTOCHANGE
             (slab_bold_brainmask_wf, trans_slab_bold_brainmask_to_anat_wf, [("outputnode.brainmask", "inputnode.slab_bold_brainmask")]),
             (merge_transforms_wf, trans_slab_bold_brainmask_to_anat_wf, [
                 ("outputnode.slab2anat_warp", "inputnode.t1_warp"),

@@ -350,162 +350,54 @@ def init_wholebrain_bold_to_anat_wf(
     fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(name="itk2fsl_wholebrain_bold_to_t1")
     inv_itk_to_fsl = init_itk_to_fsl_affine_wf(name="itk2fsl_t1_to_wholebrain_bold")
 
-    workflow.connect(
-        [
-            (
-                inputnode,
-                n4_bold,
-                [("undistorted_bold", "input_image")],
-            ),
-            (
-                n4_bold,
-                wholebrain_bold_to_anat,
-                [("output_image", "inputnode.in_file")],
-            ),
-            (
-                inputnode,
-                wholebrain_bold_to_anat,
-                [
-                    (
-                        "fsnative2t1w_xfm",
-                        "inputnode.fsnative2t1w_xfm",
-                    ),
-                    ("subjects_dir", "inputnode.subjects_dir"),
-                    ("subject_id", "inputnode.subject_id"),
-                    ("t1w_dseg", "inputnode.t1w_dseg"),
-                    ("t1w_brain", "inputnode.t1w_brain"),
-                    # ('undistorted_bold','inputnode.in_file')
-                ],
-            ),
-            (
-                inputnode,
-                dseg_to_wholebrain_bold,
-                [
-                    ("t1w_dseg", "input_image"),
-                    ("undistorted_bold", "reference_image"),
-                ],
-            ),
-            (
-                wholebrain_bold_to_anat,
-                dseg_to_wholebrain_bold,
-                [("outputnode.itk_t1_to_bold", "transforms")],
-            ),
-            (
-                dseg_to_wholebrain_bold,
-                outputnode,
-                [("output_image", "undistorted_bold_dseg")],
-            ),
-            (
-                inputnode,
-                gen_ref,
-                [
-                    ("undistorted_bold", "moving_image"),
-                    ("t1w_brain", "fixed_image"),
-                ],
-            ),
-            (
-                gen_ref,
-                apply_wholebrain_bold_to_t1,
-                [("out_file", "reference_image")],
-            ),
-            (
-                inputnode,
-                apply_wholebrain_bold_to_t1,
-                [("undistorted_bold", "input_image")],
-            ),
-            (
-                wholebrain_bold_to_anat,
-                apply_wholebrain_bold_to_t1,
-                [("outputnode.itk_bold_to_t1", "transforms")],
-            ),
-            (
-                apply_wholebrain_bold_to_t1,
-                threshold_zero,
-                [("output_image", "in_file")],
-            ),
-            (
-                threshold_zero,
-                outputnode,
-                [("out_file", "undistorted_bold_to_t1")],
-            ),
-            (
-                wholebrain_bold_to_anat,
-                outputnode,
-                [
-                    (
-                        "outputnode.itk_bold_to_t1",
-                        "itk_wholebrain_bold_to_t1",
-                    ),
-                    (
-                        "outputnode.itk_t1_to_bold",
-                        "itk_t1_to_wholebrain_bold",
-                    ),
-                ],
-            ),
-            (
-                inputnode,
-                fwd_itk_to_fsl,
-                [
-                    ("undistorted_bold", "inputnode.source"),
-                    ("t1w_brain", "inputnode.reference"),
-                ],
-            ),
-            (
-                wholebrain_bold_to_anat,
-                fwd_itk_to_fsl,
-                [
-                    (
-                        "outputnode.itk_bold_to_t1",
-                        "inputnode.itk_affine",
-                    )
-                ],
-            ),
-            (
-                fwd_itk_to_fsl,
-                outputnode,
-                [
-                    (
-                        "outputnode.fsl_affine",
-                        "fsl_wholebrain_bold_to_t1",
-                    )
-                ],
-            ),
-            (
-                inputnode,
-                inv_itk_to_fsl,
-                [
-                    ("undistorted_bold", "inputnode.reference"),
-                    ("t1w_brain", "inputnode.source"),
-                ],
-            ),
-            (
-                wholebrain_bold_to_anat,
-                inv_itk_to_fsl,
-                [
-                    (
-                        "outputnode.itk_t1_to_bold",
-                        "inputnode.itk_affine",
-                    )
-                ],
-            ),
-            (
-                inv_itk_to_fsl,
-                outputnode,
-                [
-                    (
-                        "outputnode.fsl_affine",
-                        "fsl_t1_to_wholebrain_bold",
-                    )
-                ],
-            ),
-            # report
-            (
-                wholebrain_bold_to_anat,
-                outputnode,
-                [("outputnode.out_report", "out_report")],
-            ),
-        ]
-    )
+    # Connect
+    # fmt: off
+    workflow.connect([
+        (inputnode, n4_bold, [("undistorted_bold", "input_image")]),
+        (n4_bold, wholebrain_bold_to_anat, [("output_image", "inputnode.in_file")]),
+        (inputnode, wholebrain_bold_to_anat, [
+            ("fsnative2t1w_xfm", "inputnode.fsnative2t1w_xfm"),
+            ("subjects_dir", "inputnode.subjects_dir"),
+            ("subject_id", "inputnode.subject_id"),
+            ("t1w_dseg", "inputnode.t1w_dseg"),
+            ("t1w_brain", "inputnode.t1w_brain"),
+        ]),
+        (inputnode, dseg_to_wholebrain_bold, [
+            ("t1w_dseg", "input_image"),
+            ("undistorted_bold", "reference_image"),
+        ]),
+        (wholebrain_bold_to_anat, dseg_to_wholebrain_bold, [("outputnode.itk_t1_to_bold", "transforms")]),
+        (dseg_to_wholebrain_bold, outputnode, [("output_image", "undistorted_bold_dseg")]),
+        (inputnode, gen_ref, [
+            ("undistorted_bold", "moving_image"),
+            ("t1w_brain", "fixed_image"),
+        ]),
+        (gen_ref, apply_wholebrain_bold_to_t1, [("out_file", "reference_image")]),
+        (inputnode, apply_wholebrain_bold_to_t1, [("undistorted_bold", "input_image")]),
+        (wholebrain_bold_to_anat, apply_wholebrain_bold_to_t1, [("outputnode.itk_bold_to_t1", "transforms")]),
+        (apply_wholebrain_bold_to_t1, threshold_zero, [("output_image", "in_file")]),
+        (threshold_zero, outputnode, [("out_file", "undistorted_bold_to_t1")]),
+        (wholebrain_bold_to_anat, outputnode, [
+            ("outputnode.itk_bold_to_t1", "itk_wholebrain_bold_to_t1"),
+            ("outputnode.itk_t1_to_bold", "itk_t1_to_wholebrain_bold"),
+        ]),
+        (inputnode, fwd_itk_to_fsl, [
+            ("undistorted_bold", "inputnode.source"),
+            #("t1w_brain", "inputnode.reference"),
+        ]),
+        (gen_ref, fwd_itk_to_fsl, [("out_file", "inputnode.reference")]),
+        (wholebrain_bold_to_anat, fwd_itk_to_fsl, [("outputnode.itk_bold_to_t1", "inputnode.itk_affine")]),
+        (fwd_itk_to_fsl, outputnode, [("outputnode.fsl_affine", "fsl_wholebrain_bold_to_t1")]),
+        (inputnode, inv_itk_to_fsl, [
+            ("undistorted_bold", "inputnode.reference"),
+            ("t1w_brain", "inputnode.source"),
+        ]),
+        (wholebrain_bold_to_anat, inv_itk_to_fsl, [("outputnode.itk_t1_to_bold","inputnode.itk_affine")]),
+        (inv_itk_to_fsl, outputnode, [("outputnode.fsl_affine", "fsl_t1_to_wholebrain_bold")]),
+        # report
+        (wholebrain_bold_to_anat, outputnode, [("outputnode.out_report", "out_report")]),
+    ])
+    # fmt: on
 
     return workflow
 
