@@ -99,6 +99,12 @@ def setup_parser():
     )
 
     parser.add_argument(
+        "--stc_off",
+        action="store_true",
+        help=("[bold-stc] Runs preprocessing without" " slice-timing correction."),
+    )
+
+    parser.add_argument(
         "--bold_hmc_lowpass_threshold",
         default=0.2,
         type=float,

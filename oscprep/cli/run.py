@@ -102,6 +102,7 @@ def run():
     # mprage
     MPRAGE_SYNTHSTRIP_NO_CSF = args.mprage_synthstrip_no_csf_flag
     # bold
+    BOLD_STC_OFF = args.stc_off
     BOLD_HMC_LOWPASS_THRESHOLD = args.bold_hmc_lowpass_threshold
     # fmap
     use_fmaps = not args.fmapless
@@ -1153,12 +1154,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         - slice-timing correction (stc)
         - head-motion correction (hmc)
         """
-        # stc
-        assert bool(metadata["SliceTiming"]), "SliceTiming metadata is unavailable."
-        slab_bold_stc_wf = init_bold_stc_wf(
-            metadata=metadata, name=f"{bold_slab_base}_stc_wf"
-        )
-        slab_bold_stc_wf.inputs.inputnode.skip_vols = 0
+
         # hmc
         assert bool(
             metadata["RepetitionTime"]
@@ -1172,7 +1168,6 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         # fmt: off
         wf.connect([
             (slab_inputnode, slab_bold_ref_wf, [("slab_bold", "inputnode.bold")]),
-            (slab_inputnode, slab_bold_stc_wf, [("slab_bold", "inputnode.bold_file")]),
             (slab_inputnode, slab_bold_hmc_wf, [("slab_bold", "inputnode.bold_file")]),
             (slab_bold_ref_wf, slab_bold_hmc_wf, [("outputnode.boldref", "inputnode.bold_reference")]),
         ])
@@ -1242,7 +1237,25 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
             ])
             """
 
-        # connect
+        # connect bold image that is to be transformed to t1 space
+        # this depends on whether STC is used.
+        if not BOLD_STC_OFF:
+            assert bool(metadata["SliceTiming"]), "SliceTiming metadata is unavailable."
+            slab_bold_stc_wf = init_bold_stc_wf(
+                metadata=metadata, name=f"{bold_slab_base}_stc_wf"
+            )
+            slab_bold_stc_wf.inputs.inputnode.skip_vols = 0
+            # fmt: off
+            wf.connect([
+                (slab_inputnode, slab_bold_stc_wf, [("slab_bold", "inputnode.bold_file")]),
+                (slab_bold_stc_wf, trans_slab_bold_to_anat_wf, [("outputnode.stc_file", "inputnode.bold_file")])
+            ])
+            # fmt: on
+        else:
+            # fmt: off
+            wf.connect([(slab_inputnode, trans_slab_bold_to_anat_wf, [("slab_bold", "inputnode.bold_file")])])
+            # fmt: on
+
         # fmt: off
         wf.connect([
             (slab_to_slabref_bold_wf, merge_transforms_wf, [("outputnode.fsl_slab_to_slabref_bold", "inputnode.slab2slabref_aff")]),
@@ -1261,7 +1274,6 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
                 ("outputnode.reference_resampled", "inputnode.t1_resampled")
             ]),
             (slab_bold_hmc_wf, trans_slab_bold_to_anat_wf, [("outputnode.fsl_affines", "inputnode.fsl_hmc_affines")]),
-            (slab_bold_stc_wf, trans_slab_bold_to_anat_wf, [("outputnode.stc_file", "inputnode.bold_file")]),
             (slab_bold_ref_wf, trans_slab_bold_to_anat_wf, [("outputnode.boldref", "inputnode.bold_ref")]),
             (trans_slab_bold_to_anat_wf, trans_slab_bold_brainmask_to_anat_wf, [("outputnode.t1_space_boldref", "inputnode.t1_boldref")])
         ])
