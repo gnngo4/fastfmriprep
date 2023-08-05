@@ -2,7 +2,9 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
 
-def init_bold_hmc_wf(low_pass_threshold=0, name="bold_hmc_wf"):
+def init_bold_hmc_wf(
+    low_pass_threshold=0, cost_function="normcorr", name="bold_hmc_wf"
+):
     from niworkflows.engine.workflows import (
         LiterateWorkflow as Workflow,
     )
@@ -38,32 +40,19 @@ def init_bold_hmc_wf(low_pass_threshold=0, name="bold_hmc_wf"):
         # Low-pass-filter bold data
         lp_filter_bold = pe.Node(LowPassFilterBold(), name="lp_filter_bold")
         lp_filter_bold.inputs.low_pass_threshold = low_pass_threshold
-        workflow.connect(
-            [
-                (
-                    inputnode,
-                    lp_filter_bold,
-                    [
-                        ("bold_file", "bold_path"),
-                        (
-                            (
-                                "bold_metadata",
-                                _get_metadata,
-                                "RepetitionTime",
-                            ),
-                            "repetition_time",
-                        ),
-                    ],
-                ),
-                (
-                    lp_filter_bold,
-                    boldbuffer,
-                    [("lp_bold_path", "bold_file")],
-                ),
-            ]
-        )
+        # fmt: off
+        workflow.connect([
+            (inputnode, lp_filter_bold, [
+                ("bold_file", "bold_path"),
+                (("bold_metadata", _get_metadata, "RepetitionTime"), "repetition_time"),
+            ]),
+            (lp_filter_bold, boldbuffer, [("lp_bold_path", "bold_file")]),
+        ])
+        # fmt: on
     else:
+        # fmt: off
         workflow.connect([(inputnode, boldbuffer, [("bold_file", "bold_file")])])
+        # fmt: on
 
     # Head-motion correction
     mcflirt = pe.Node(
@@ -71,6 +60,7 @@ def init_bold_hmc_wf(low_pass_threshold=0, name="bold_hmc_wf"):
             save_mats=True,
             save_plots=True,
             save_rms=True,
+            cost=cost_function,
         ),
         name="mcflirt",
     )
@@ -79,26 +69,18 @@ def init_bold_hmc_wf(low_pass_threshold=0, name="bold_hmc_wf"):
         NormalizeMotionParams(format="FSL"), name="normalize_motion"
     )
 
-    workflow.connect(
-        [
-            (boldbuffer, mcflirt, [("bold_file", "in_file")]),
-            (inputnode, mcflirt, [("bold_reference", "ref_file")]),
-            (mcflirt, normalize_motion, [("par_file", "in_file")]),
-            (
-                mcflirt,
-                outputnode,
-                [
-                    (("rms_files", _pick_rel), "rmsd_file"),
-                    ("mat_file", "fsl_affines"),
-                ],
-            ),
-            (
-                normalize_motion,
-                outputnode,
-                [("out_file", "movpar_file")],
-            ),
-        ]
-    )
+    # fmt: off
+    workflow.connect([
+        (boldbuffer, mcflirt, [("bold_file", "in_file")]),
+        (inputnode, mcflirt, [("bold_reference", "ref_file")]),
+        (mcflirt, normalize_motion, [("par_file", "in_file")]),
+        (mcflirt, outputnode, [
+            (("rms_files", _pick_rel), "rmsd_file"),
+            ("mat_file", "fsl_affines"),
+        ]),
+        (normalize_motion, outputnode, [("out_file", "movpar_file")]),
+    ])
+    # fmt: on
 
     return workflow
 

@@ -104,6 +104,7 @@ def run():
     # bold
     BOLD_REF_VOL_IDX = args.bold_ref_vol_idx
     BOLD_STC_OFF = args.stc_off
+    BOLD_HMC_COST_FUNCTION = args.bold_hmc_cost_function
     BOLD_HMC_LOWPASS_THRESHOLD = args.bold_hmc_lowpass_threshold
     # fmap
     use_fmaps = not args.fmapless
@@ -1166,6 +1167,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         ), "RepetitionTime metadata is unavailable."
         slab_bold_hmc_wf = init_bold_hmc_wf(
             low_pass_threshold=BOLD_HMC_LOWPASS_THRESHOLD,
+            cost_function=BOLD_HMC_COST_FUNCTION,
             name=f"{bold_slab_base}_hmc_wf",
         )
         slab_bold_hmc_wf.inputs.inputnode.bold_metadata = metadata

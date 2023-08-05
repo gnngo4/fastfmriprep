@@ -114,6 +114,20 @@ def setup_parser():
     )
 
     parser.add_argument(
+        "--bold_hmc_cost_function",
+        default="normcorr",
+        choices=[
+            "mutualinfo",
+            "woods",
+            "corratio",
+            "normcorr",
+            "normmi",
+            "leastsquares",
+        ],
+        help=("[bold-hmc] MCFLIRT cost-function. default=normcorr."),
+    )
+
+    parser.add_argument(
         "--bold_hmc_lowpass_threshold",
         default=0.2,
         type=float,
