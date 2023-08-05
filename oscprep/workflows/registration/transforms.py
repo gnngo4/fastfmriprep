@@ -212,50 +212,18 @@ def init_fmap_to_slab_bold_wf(name="reg_fmap_to_slab_bold_wf"):
         name="compose_transform",
     )
 
-    workflow.connect(
-        [
-            (
-                inputnode,
-                concat_transforms,
-                [("itk_fmap2anat", "xfm_1")],
-            ),
-            (
-                inputnode,
-                wholebrainbold_tfm_to_txt,
-                [("itk_anat2wholebrainbold", "source")],
-            ),
-            (
-                wholebrainbold_tfm_to_txt,
-                concat_transforms,
-                [("out", "xfm_2")],
-            ),
-            (
-                inputnode,
-                slabbold_tfm_to_txt,
-                [("itk_wholebrainbold2slabbold", "source")],
-            ),
-            (
-                slabbold_tfm_to_txt,
-                concat_transforms,
-                [("out", "xfm_3")],
-            ),
-            (
-                slabbold_tfm_to_txt,
-                compose_transform,
-                [(("out", _add_reference_flag), "reference_image")],
-            ),
-            (
-                concat_transforms,
-                compose_transform,
-                [("out", "transforms")],
-            ),
-            (
-                compose_transform,
-                outputnode,
-                [("output_transform", "itk_fmap2epi")],
-            ),
-        ]
-    )
+    # fmt: off
+    workflow.connect([
+        (inputnode, concat_transforms, [("itk_fmap2anat", "xfm_1")]),
+        (inputnode, wholebrainbold_tfm_to_txt, [("itk_anat2wholebrainbold", "source")]),
+        (wholebrainbold_tfm_to_txt, concat_transforms, [("out", "xfm_2")]),
+        (inputnode, slabbold_tfm_to_txt, [("itk_wholebrainbold2slabbold", "source")]),
+        (slabbold_tfm_to_txt, concat_transforms, [("out", "xfm_3")]),
+        (slabbold_tfm_to_txt, compose_transform, [(("out", _add_reference_flag), "reference_image")]),
+        (concat_transforms, compose_transform, [("out", "transforms")]),
+        (compose_transform, outputnode, [("output_transform", "itk_fmap2epi")]),
+    ])
+    # fmt: on
 
     return workflow
 
@@ -461,117 +429,34 @@ def init_slab_bold_to_wholebrain_bold_wf(
         name="itk2fsl_wholebrain_bold_to_slab_bold"
     )
 
-    workflow.connect(
-        [
-            (
-                inputnode,
-                n4_bold,
-                [("undistorted_slab_bold", "input_image")],
-            ),
-            (
-                n4_bold,
-                slab_bold_to_wholebrain_bold,
-                [("output_image", "inputnode.in_file")],
-            ),
-            (
-                inputnode,
-                slab_bold_to_wholebrain_bold,
-                [
-                    (
-                        "undistorted_wholebrain_bold",
-                        "inputnode.t1w_brain",
-                    ),
-                    (
-                        "undistorted_wholebrain_bold_dseg",
-                        "inputnode.t1w_dseg",
-                    ),
-                    # ('undistorted_slab_bold','inputnode.in_file')
-                ],
-            ),
-            (
-                slab_bold_to_wholebrain_bold,
-                outputnode,
-                [
-                    (
-                        "outputnode.itk_bold_to_t1",
-                        "itk_slab_bold_to_wholebrain_bold",
-                    ),
-                    (
-                        "outputnode.itk_t1_to_bold",
-                        "itk_wholebrain_bold_to_slab_bold",
-                    ),
-                ],
-            ),
-            (
-                inputnode,
-                fwd_itk_to_fsl,
-                [
-                    ("undistorted_slab_bold", "inputnode.source"),
-                    (
-                        "undistorted_wholebrain_bold",
-                        "inputnode.reference",
-                    ),
-                ],
-            ),
-            (
-                slab_bold_to_wholebrain_bold,
-                fwd_itk_to_fsl,
-                [
-                    (
-                        "outputnode.itk_bold_to_t1",
-                        "inputnode.itk_affine",
-                    )
-                ],
-            ),
-            (
-                fwd_itk_to_fsl,
-                outputnode,
-                [
-                    (
-                        "outputnode.fsl_affine",
-                        "fsl_slab_bold_to_wholebrain_bold",
-                    )
-                ],
-            ),
-            (
-                inputnode,
-                inv_itk_to_fsl,
-                [
-                    (
-                        "undistorted_wholebrain_bold",
-                        "inputnode.reference",
-                    ),
-                    ("undistorted_slab_bold", "inputnode.source"),
-                ],
-            ),
-            (
-                slab_bold_to_wholebrain_bold,
-                inv_itk_to_fsl,
-                [
-                    (
-                        "outputnode.itk_t1_to_bold",
-                        "inputnode.itk_affine",
-                    )
-                ],
-            ),
-            (
-                inv_itk_to_fsl,
-                outputnode,
-                [
-                    (
-                        "outputnode.fsl_affine",
-                        "fsl_wholebrain_bold_to_slab_bold",
-                    )
-                ],
-            ),
-            # report
-            (
-                slab_bold_to_wholebrain_bold,
-                outputnode,
-                [("outputnode.out_report", "out_report")],
-            ),
-        ]
-    )
+    # fmt: off
+    workflow.connect([
+        (inputnode, n4_bold, [("undistorted_slab_bold", "input_image")]),
+        (n4_bold, slab_bold_to_wholebrain_bold, [("output_image", "inputnode.in_file")]),
+        (inputnode, slab_bold_to_wholebrain_bold, [
+            ("undistorted_wholebrain_bold", "inputnode.t1w_brain"),
+            ("undistorted_wholebrain_bold_dseg", "inputnode.t1w_dseg"),
+        ]),
+        (slab_bold_to_wholebrain_bold, outputnode, [
+            ("outputnode.itk_bold_to_t1", "itk_slab_bold_to_wholebrain_bold"),
+            ("outputnode.itk_t1_to_bold", "itk_wholebrain_bold_to_slab_bold"),
+        ]),
+        (inputnode, fwd_itk_to_fsl, [
+            ("undistorted_slab_bold", "inputnode.source"),
+            ("undistorted_wholebrain_bold", "inputnode.reference"),
+        ]),
+        (slab_bold_to_wholebrain_bold, fwd_itk_to_fsl, [("outputnode.itk_bold_to_t1", "inputnode.itk_affine")]),
+        (fwd_itk_to_fsl, outputnode, [("outputnode.fsl_affine", "fsl_slab_bold_to_wholebrain_bold")]),
+        (inputnode, inv_itk_to_fsl, [
+            ("undistorted_wholebrain_bold", "inputnode.reference"),
+            ("undistorted_slab_bold", "inputnode.source"),
+        ]),
+        (slab_bold_to_wholebrain_bold, inv_itk_to_fsl, [("outputnode.itk_t1_to_bold", "inputnode.itk_affine")]),
+        (inv_itk_to_fsl, outputnode, [("outputnode.fsl_affine", "fsl_wholebrain_bold_to_slab_bold")]),
+        # report
+        (slab_bold_to_wholebrain_bold, outputnode, [("outputnode.out_report", "out_report")]),
+    ])
+    # fmt: on
 
     return workflow
 
@@ -615,6 +500,7 @@ def init_slab_to_slabref_bold_wf(
     )
 
     n4_bold = pe.Node(N4BiasFieldCorrection(), name="n4_bias_correct_bold")
+    n4_boldref = pe.Node(N4BiasFieldCorrection(), name="n4_bias_correct_boldref")
 
     slab_to_slabref_bold = init_fsl_bbr_wf(
         bold2t1w_dof=bold2t1w_dof,
@@ -627,100 +513,32 @@ def init_slab_to_slabref_bold_wf(
     fwd_itk_to_fsl = init_itk_to_fsl_affine_wf(name="itk2fsl_slab_to_slabref_bold")
     inv_itk_to_fsl = init_itk_to_fsl_affine_wf(name="itk2fsl_slabref_to_slab_bold")
 
-    workflow.connect(
-        [
-            (inputnode, n4_bold, [("slab_bold", "input_image")]),
-            (
-                n4_bold,
-                slab_to_slabref_bold,
-                [("output_image", "inputnode.in_file")],
-            ),
-            (
-                inputnode,
-                slab_to_slabref_bold,
-                [
-                    ("slabref_bold", "inputnode.t1w_brain"),
-                    # ('slab_bold','inputnode.in_file'),
-                ],
-            ),
-            (
-                slab_to_slabref_bold,
-                outputnode,
-                [
-                    (
-                        "outputnode.itk_bold_to_t1",
-                        "itk_slab_to_slabref_bold",
-                    ),
-                    (
-                        "outputnode.itk_t1_to_bold",
-                        "itk_slabref_to_slab_bold",
-                    ),
-                ],
-            ),
-            (
-                inputnode,
-                fwd_itk_to_fsl,
-                [
-                    ("slab_bold", "inputnode.source"),
-                    ("slabref_bold", "inputnode.reference"),
-                ],
-            ),
-            (
-                slab_to_slabref_bold,
-                fwd_itk_to_fsl,
-                [
-                    (
-                        "outputnode.itk_bold_to_t1",
-                        "inputnode.itk_affine",
-                    )
-                ],
-            ),
-            (
-                fwd_itk_to_fsl,
-                outputnode,
-                [
-                    (
-                        "outputnode.fsl_affine",
-                        "fsl_slab_to_slabref_bold",
-                    )
-                ],
-            ),
-            (
-                inputnode,
-                inv_itk_to_fsl,
-                [
-                    ("slabref_bold", "inputnode.reference"),
-                    ("slab_bold", "inputnode.source"),
-                ],
-            ),
-            (
-                slab_to_slabref_bold,
-                inv_itk_to_fsl,
-                [
-                    (
-                        "outputnode.itk_t1_to_bold",
-                        "inputnode.itk_affine",
-                    )
-                ],
-            ),
-            (
-                inv_itk_to_fsl,
-                outputnode,
-                [
-                    (
-                        "outputnode.fsl_affine",
-                        "fsl_slabref_to_slab_bold",
-                    )
-                ],
-            ),
-            # report
-            (
-                slab_to_slabref_bold,
-                outputnode,
-                [("outputnode.out_report", "out_report")],
-            ),
-        ]
-    )
+    # fmt: off
+    workflow.connect([
+        (inputnode, n4_bold, [("slab_bold", "input_image")]),
+        (inputnode, n4_boldref, [("slabref_bold", "input_image")]),
+        (n4_bold, slab_to_slabref_bold, [("output_image", "inputnode.in_file")]),
+        (n4_boldref, slab_to_slabref_bold, [("output_image", "inputnode.t1w_brain")]),
+        (slab_to_slabref_bold, outputnode, [
+            ("outputnode.itk_bold_to_t1", "itk_slab_to_slabref_bold"),
+            ("outputnode.itk_t1_to_bold", "itk_slabref_to_slab_bold"),
+        ]),
+        (inputnode, fwd_itk_to_fsl, [
+            ("slab_bold", "inputnode.source"),
+            ("slabref_bold", "inputnode.reference"),
+        ]),
+        (slab_to_slabref_bold, fwd_itk_to_fsl, [("outputnode.itk_bold_to_t1", "inputnode.itk_affine")]),
+        (fwd_itk_to_fsl, outputnode, [("outputnode.fsl_affine", "fsl_slab_to_slabref_bold")]),
+        (inputnode, inv_itk_to_fsl, [
+            ("slabref_bold", "inputnode.reference"),
+            ("slab_bold", "inputnode.source"),
+        ]),
+        (slab_to_slabref_bold, inv_itk_to_fsl, [("outputnode.itk_t1_to_bold", "inputnode.itk_affine")]),
+        (inv_itk_to_fsl, outputnode, [("outputnode.fsl_affine", "fsl_slabref_to_slab_bold")]),
+        # report
+        (slab_to_slabref_bold, outputnode, [("outputnode.out_report", "out_report")]),
+    ])
+    # fmt: on
 
     return workflow
 
