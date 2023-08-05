@@ -37,15 +37,11 @@ def init_bold_ref_wf(bold, split_vol_id=0, name="get_bold_reference_wf"):
 
     sbref = bold.replace("_bold.nii.gz", "_sbref.nii.gz")
     if os.path.exists(sbref):
-        workflow.connect(
-            [
-                (
-                    inputnode,
-                    outputnode,
-                    [(("bold", _get_sbref), "boldref")],
-                )
-            ]
-        )
+        # fmt: off
+        workflow.connect([
+            (inputnode, outputnode, [(("bold", _get_sbref), "boldref")]),
+        ])
+        # fmt: on
 
         return workflow
 
@@ -57,25 +53,12 @@ def init_bold_ref_wf(bold, split_vol_id=0, name="get_bold_reference_wf"):
             name="split_bold",
         )
 
-        workflow.connect(
-            [
-                (inputnode, split_bold, [("bold", "in_file")]),
-                (
-                    split_bold,
-                    outputnode,
-                    [
-                        (
-                            (
-                                "out_files",
-                                _get_split_volume,
-                                split_vol_id,
-                            ),
-                            "boldref",
-                        )
-                    ],
-                ),
-            ]
-        )
+        # fmt: off
+        workflow.connect([
+            (inputnode, split_bold, [("bold", "in_file")]),
+            (split_bold, outputnode, [(("out_files", _get_split_volume, split_vol_id), "boldref")]),
+        ])
+        # fmt: on
 
         return workflow
 

@@ -99,6 +99,15 @@ def setup_parser():
     )
 
     parser.add_argument(
+        "--bold_ref_vol_idx",
+        default=0,
+        type=int,
+        help=(
+            "[bold-ref] Select the slab bold reference volume when a sbref image is not detected. default=0."
+        ),
+    )
+
+    parser.add_argument(
         "--stc_off",
         action="store_true",
         help=("[bold-stc] Runs preprocessing without" " slice-timing correction."),

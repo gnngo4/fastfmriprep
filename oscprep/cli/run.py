@@ -102,6 +102,7 @@ def run():
     # mprage
     MPRAGE_SYNTHSTRIP_NO_CSF = args.mprage_synthstrip_no_csf_flag
     # bold
+    BOLD_REF_VOL_IDX = args.bold_ref_vol_idx
     BOLD_STC_OFF = args.stc_off
     BOLD_HMC_LOWPASS_THRESHOLD = args.bold_hmc_lowpass_threshold
     # fmap
@@ -911,7 +912,9 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         slabref_inputnode.inputs.slab_bold = slabref_bold
         # get slab bold reference image
         slabref_bold_ref_wf = init_bold_ref_wf(
-            slabref_bold, name="slab_reference_reference_wf"
+            slabref_bold,
+            split_vol_id=BOLD_REF_VOL_IDX,
+            name="slab_reference_reference_wf",
         )
         # connect
         # fmt: off
@@ -1147,7 +1150,9 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         slab_inputnode.inputs.slab_bold = bold_slab
         # get slab bold reference image
         slab_bold_ref_wf = init_bold_ref_wf(
-            bold_slab, name=f"{bold_slab_base}_reference_wf"
+            bold_slab,
+            split_vol_id=BOLD_REF_VOL_IDX,
+            name=f"{bold_slab_base}_reference_wf",
         )
         """
         apply some minimal preprocessing steps
