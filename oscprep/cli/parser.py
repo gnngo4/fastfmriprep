@@ -114,6 +114,12 @@ def setup_parser():
     )
 
     parser.add_argument(
+        "--bold_hmc_n4",
+        action="store_true",
+        help=("[bold-hmc] Enable N4 bias field correction on BOLD data prior to hmc."),
+    )
+
+    parser.add_argument(
         "--bold_hmc_cost_function",
         default="normcorr",
         choices=[
@@ -133,7 +139,7 @@ def setup_parser():
         type=float,
         help=(
             "[bold-hmc] Estimate hmc parameters with lowpass filtered"
-            " BOLD data (applied to non-filtered data). default=0.2."
+            " BOLD data (applied to non-filtered data). Set to 0 to turn off. default=0.2."
         ),
     )
 

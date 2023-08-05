@@ -1,9 +1,14 @@
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
+from oscprep.workflows.registration.utils import init_apply_n4_to_bold
+from nipype.interfaces.ants import N4BiasFieldCorrection
 
 
 def init_bold_hmc_wf(
-    low_pass_threshold=0, cost_function="normcorr", name="bold_hmc_wf"
+    low_pass_threshold=0,
+    cost_function="normcorr",
+    bold_hmc_n4=False,
+    name="bold_hmc_wf",
 ):
     from niworkflows.engine.workflows import (
         LiterateWorkflow as Workflow,
@@ -64,15 +69,33 @@ def init_bold_hmc_wf(
         ),
         name="mcflirt",
     )
-
     normalize_motion = pe.Node(
         NormalizeMotionParams(format="FSL"), name="normalize_motion"
     )
 
+    if not bold_hmc_n4:
+        # fmt: off
+        workflow.connect([
+            (boldbuffer, mcflirt, [("bold_file", "in_file")]),
+            (inputnode, mcflirt, [("bold_reference", "ref_file")]),
+        ])
+        # fmt: on
+    else:
+        apply_n4_to_bold = init_apply_n4_to_bold(name="apply_n4_to_bold")
+        n4_boldref = pe.Node(
+            N4BiasFieldCorrection(dimension=3), name="apply_n4_to_boldref"
+        )
+        # fmt: off
+        workflow.connect([
+            (boldbuffer, apply_n4_to_bold, [("bold_file", "inputnode.bold")]),
+            (apply_n4_to_bold, mcflirt, [("outputnode.n4_bold", "in_file")]),
+            (inputnode, n4_boldref, [("bold_reference", "input_image")]),
+            (n4_boldref, mcflirt, [("output_image", "ref_file")]),
+        ])
+        # fmt: on
+
     # fmt: off
     workflow.connect([
-        (boldbuffer, mcflirt, [("bold_file", "in_file")]),
-        (inputnode, mcflirt, [("bold_reference", "ref_file")]),
         (mcflirt, normalize_motion, [("par_file", "in_file")]),
         (mcflirt, outputnode, [
             (("rms_files", _pick_rel), "rmsd_file"),

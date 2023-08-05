@@ -1,6 +1,54 @@
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
+from nipype.interfaces.ants import N4BiasFieldCorrection
+from nipype.interfaces.fsl.utils import Split, Merge
+import nipype.pipeline.engine as pe
+import nipype.interfaces.utility as util
+
+
+def init_apply_n4_to_bold(name="apply_n4_to_bold_wf"):
+    """
+    N4 Bias-field correct each volume in a bold acquisition.
+
+    Parameters
+    ----------
+
+    Inputs
+    ------
+
+    Outputs
+    -------
+
+    """
+    from niworkflows.engine.workflows import (
+        LiterateWorkflow as Workflow,
+    )
+
+    workflow = Workflow(name=name)
+
+    inputnode = pe.Node(niu.IdentityInterface(["bold"]), name="inputnode")
+    outputnode = pe.Node(niu.IdentityInterface(["n4_bold"]), name="outputnode")
+
+    split_bold = pe.Node(Split(dimension="t"), name="split_bold")
+    n4_correction = pe.MapNode(
+        N4BiasFieldCorrection(dimension=3),
+        iterfield=["input_image"],
+        name="n4_correction",
+    )
+    merge_bold = pe.Node(Merge(dimension="t"), name="merge_bold")
+
+    # fmt: off
+    workflow.connect([
+        (inputnode, split_bold, [("bold", "in_file")]),
+        (split_bold, n4_correction, [("out_files", "input_image")]),
+        (n4_correction, merge_bold, [("output_image", "in_files")]),
+        (merge_bold, outputnode, [("merged_file", "n4_bold")])
+    ])
+    # fmt: on
+
+    return workflow
+
 
 def init_itk_to_fsl_affine_wf(name="itk_to_fsl_affine_wf"):
     """
