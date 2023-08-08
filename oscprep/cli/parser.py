@@ -114,6 +114,12 @@ def setup_parser():
     )
 
     parser.add_argument(
+        "--bold_hmc_mppca",
+        action="store_true",
+        help=("[bold-hmc] Enable PCA-denoising on BOLD data prior to hmc."),
+    )
+
+    parser.add_argument(
         "--bold_hmc_n4",
         action="store_true",
         help=("[bold-hmc] Enable N4 bias field correction on BOLD data prior to hmc."),

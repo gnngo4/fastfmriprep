@@ -104,6 +104,7 @@ def run():
     # bold
     BOLD_REF_VOL_IDX = args.bold_ref_vol_idx
     BOLD_STC_OFF = args.stc_off
+    BOLD_HMC_MPPCA = args.bold_hmc_mppca
     BOLD_HMC_N4 = args.bold_hmc_n4
     BOLD_HMC_COST_FUNCTION = args.bold_hmc_cost_function
     BOLD_HMC_LOWPASS_THRESHOLD = args.bold_hmc_lowpass_threshold
@@ -916,6 +917,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         slabref_bold_ref_wf = init_bold_ref_wf(
             slabref_bold,
             split_vol_id=BOLD_REF_VOL_IDX,
+            pca_denoise=BOLD_HMC_MPPCA,
             name="slab_reference_reference_wf",
         )
         # connect
@@ -1154,6 +1156,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         slab_bold_ref_wf = init_bold_ref_wf(
             bold_slab,
             split_vol_id=BOLD_REF_VOL_IDX,
+            pca_denoise=BOLD_HMC_MPPCA,
             name=f"{bold_slab_base}_reference_wf",
         )
         """
@@ -1168,6 +1171,7 @@ BOLD_PREPROC_DIR: {BOLD_PREPROC_DIR}
         ), "RepetitionTime metadata is unavailable."
         slab_bold_hmc_wf = init_bold_hmc_wf(
             low_pass_threshold=BOLD_HMC_LOWPASS_THRESHOLD,
+            pca_denoise=BOLD_HMC_MPPCA,
             cost_function=BOLD_HMC_COST_FUNCTION,
             bold_hmc_n4=BOLD_HMC_N4,
             name=f"{bold_slab_base}_hmc_wf",

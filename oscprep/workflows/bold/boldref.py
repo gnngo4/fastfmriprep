@@ -4,7 +4,9 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 
 
-def init_bold_ref_wf(bold, split_vol_id=0, name="get_bold_reference_wf"):
+def init_bold_ref_wf(
+    bold, split_vol_id=0, pca_denoise=False, name="get_bold_reference_wf"
+):
     """
     Get the bold reference image corresponding
     to the 4D bold image
@@ -53,9 +55,29 @@ def init_bold_ref_wf(bold, split_vol_id=0, name="get_bold_reference_wf"):
             name="split_bold",
         )
 
+        if pca_denoise:
+            from oscprep.interfaces.pca_denoise import PCADenoise
+
+            pca_denoise_bold = pe.Node(
+                PCADenoise(),
+                name="pca_denoise",
+            )
+            # fmt: off
+            workflow.connect([
+                (inputnode, pca_denoise_bold, [("bold", "bold_path")]),
+                (pca_denoise_bold, split_bold, [("mppca_path", "in_file")])
+            ])
+            # fmt: on
+
+        else:
+            # fmt: off
+            workflow.connect([
+                (inputnode, split_bold, [("bold", "in_file")]),
+            ])
+            # fmt: on
+
         # fmt: off
         workflow.connect([
-            (inputnode, split_bold, [("bold", "in_file")]),
             (split_bold, outputnode, [(("out_files", _get_split_volume, split_vol_id), "boldref")]),
         ])
         # fmt: on

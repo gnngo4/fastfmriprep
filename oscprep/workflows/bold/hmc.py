@@ -6,6 +6,7 @@ from nipype.interfaces.ants import N4BiasFieldCorrection
 
 def init_bold_hmc_wf(
     low_pass_threshold=0,
+    pca_denoise=False,
     cost_function="normcorr",
     bold_hmc_n4=False,
     name="bold_hmc_wf",
@@ -39,8 +40,10 @@ def init_bold_hmc_wf(
         name="outputnode",
     )
 
-    boldbuffer = pe.Node(niu.IdentityInterface(fields=["bold_file"]), name="boldbuffer")
-
+    # LP-filter
+    lpboldbuffer = pe.Node(
+        niu.IdentityInterface(fields=["bold_file"]), name="boldbuffer"
+    )
     if low_pass_threshold > 0:
         # Low-pass-filter bold data
         lp_filter_bold = pe.Node(LowPassFilterBold(), name="lp_filter_bold")
@@ -51,13 +54,36 @@ def init_bold_hmc_wf(
                 ("bold_file", "bold_path"),
                 (("bold_metadata", _get_metadata, "RepetitionTime"), "repetition_time"),
             ]),
-            (lp_filter_bold, boldbuffer, [("lp_bold_path", "bold_file")]),
+            (lp_filter_bold, lpboldbuffer, [("lp_bold_path", "bold_file")]),
         ])
         # fmt: on
     else:
         # fmt: off
-        workflow.connect([(inputnode, boldbuffer, [("bold_file", "bold_file")])])
+        workflow.connect([(inputnode, lpboldbuffer, [("bold_file", "bold_file")])])
         # fmt: on
+
+    # PCA denoise
+    mppcaboldbuffer = pe.Node(
+        niu.IdentityInterface(fields=["bold_file"]), name="mppcaboldbuffer"
+    )
+    if pca_denoise:
+        from oscprep.interfaces.pca_denoise import PCADenoise
+
+        pca_denoise_bold = pe.Node(
+            PCADenoise(),
+            name="pca_denoise",
+        )
+        # fmt: off
+        workflow.connect([
+            (lpboldbuffer, pca_denoise_bold, [("bold_file", "bold_path")]),
+            (pca_denoise_bold, mppcaboldbuffer, [("mppca_path", "bold_file")]),
+        ])
+        # fmt: on
+    else:
+        # fmt: off
+        workflow.connect([
+            (lpboldbuffer, mppcaboldbuffer, [("bold_file", "bold_file")])
+        ])
 
     # Head-motion correction
     mcflirt = pe.Node(
@@ -76,7 +102,7 @@ def init_bold_hmc_wf(
     if not bold_hmc_n4:
         # fmt: off
         workflow.connect([
-            (boldbuffer, mcflirt, [("bold_file", "in_file")]),
+            (mppcaboldbuffer, mcflirt, [("bold_file", "in_file")]),
             (inputnode, mcflirt, [("bold_reference", "ref_file")]),
         ])
         # fmt: on
@@ -87,7 +113,7 @@ def init_bold_hmc_wf(
         )
         # fmt: off
         workflow.connect([
-            (boldbuffer, apply_n4_to_bold, [("bold_file", "inputnode.bold")]),
+            (mppcaboldbuffer, apply_n4_to_bold, [("bold_file", "inputnode.bold")]),
             (apply_n4_to_bold, mcflirt, [("outputnode.n4_bold", "in_file")]),
             (inputnode, n4_boldref, [("bold_reference", "input_image")]),
             (n4_boldref, mcflirt, [("output_image", "ref_file")]),
